@@ -142,9 +142,8 @@ bartender = (userAuth, selfId, roomId) ->
         selection = random_select(selection)
     else
       selection = random_select(msgs)
-      if !args and args.trim() isn't ""
+      if !args and args.trim() isnt ""
         bot.speak "I'm all out of " + args + "!"
-        
     
     if typeof selection is "function"
       selection = selection()
