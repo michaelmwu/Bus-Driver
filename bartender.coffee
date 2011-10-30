@@ -30,11 +30,28 @@ bartender = (userAuth, selfId, roomId) ->
   random_select = (list) ->
     list[Math.floor(Math.random()*list.length)]
   
+  scotches = [
+    "Highland Park 12"
+    "Highland Park 15"
+    "Johnny Walker Black Label"
+    "Johnny Walker Blue Label"
+    "Johnny Walker Gold Label"
+    "Laphroaig 10"
+    "Laphroaig 16"
+    "Laphroaig 18"
+    "Laphroaig Quarter Cask"
+    "Lagavulin 16"
+    "Macallan 10"
+    "Macallan 12 Fine Oak"
+    "Macallan 15 Fine Oak"
+    "Macallan 18 Fine Oak"
+    ]
+  
   special_drinks = 
     "beer": "Tap specials today are the Rogue Dead Guy Ale and the Pyramid Hefeweizen (or do you drink Bud Light?)"
     "wine": "Here, try some of our finest Chardonnay!"
     "vodka": "One double of Stoli on the rocks, coming right up!"
-    "scotch": "/me pours a double of Laphroaig 16"
+    "scotch": "/me pours a double of " + random_select(scotches)
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "amf": "Say 'Adios', motherf*cker!"
     "4loko": "Are you ready to get SLAMMED?"
