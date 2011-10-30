@@ -38,8 +38,8 @@ bartender = (userAuth, selfId, roomId) ->
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "amf": "Say 'Adios', motherf*cker!"
     "4loko": "Are you ready to get SLAMMED #{user.name}?"
-    "natty": "Alright, one \"beer\" coming right up..."
-	"coors": "CHUG! CHUG! CHUG! CHUG!"
+    "natty": "Alright, one 'beer' coming right up..."
+    "coors": "CHUG! CHUG! CHUG! CHUG!"
     "redbull & vodka": "Party it up in hurrrrrr"
   
   bot.on "registered", (data) ->
