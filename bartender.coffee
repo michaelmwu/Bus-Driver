@@ -30,8 +30,8 @@ bartender = (userAuth, selfId, roomId) ->
   random_select = (list) ->
     list[Math.floor(Math.random()*list.length)]
   
-  random_select2 = (list) ->
-    list[Math.floor(Math.random()*list.length)]
+  random_select2 = (list2) ->
+    list2[Math.floor(Math.random()*list2.length)]
   
   drinks_scotches = [
     "Aberlour 12"
@@ -92,8 +92,6 @@ bartender = (userAuth, selfId, roomId) ->
     "tom collins": "Alright, that'll be $7 please"
     "vodka": "One double of Stoli on the rocks, coming right up!"
     "wine": "Here, try some of our finest Chardonnay!"
-    
-    
     
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
