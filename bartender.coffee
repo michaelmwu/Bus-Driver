@@ -2,7 +2,6 @@ Bot = require 'ttapi'
 _un = require 'underscore'
 util = require 'util'
 r = require 'mersenne'
-$ = require 'JQuery'
 
 
 bartender = (userAuth, selfId, roomId) ->
@@ -266,7 +265,7 @@ bartender = (userAuth, selfId, roomId) ->
         selection = random_select(selection)
     else
       if args and args.trim() isnt ""
-        index = $.inArray(args.trim(), all_drinks)
+        index = _un.inArray(args.trim(), all_drinks)
         if index < 0
           selection =  "I'm all out of that, how about something else?"
         else
