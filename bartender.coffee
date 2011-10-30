@@ -74,10 +74,34 @@ bartender = (userAuth, selfId, roomId) ->
     "Stone Ruination"
   ]
   
+  
+  drinks_crappy_beers = [
+    "Bud Light"
+    "Budweiser"
+    "Coors"
+    "Coors Light"
+    "Keystone"
+    "Keystone Ice"
+    "Keystone Light"
+    "Miller"
+    "Miller Light"
+    "Natty"
+    "Natty Light"
+  ]
+  
+  
+  n_beers = drinks_beers.length
+  beers_on_tap = ->
+    i = r.rand(n_beers)
+    j = r.rand(n_beers-1)
+    k = (i + j) % n_beers
+    "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers a " + random_select(drinks_crappy_beers)
+  
+  
   special_drinks = 
     "4loko": "Are you ready to get SLAMMED?"
     "amf": "Say 'Adios', motherf*cker!"
-    "beer": -> "Tap specials today are the " + random_select(drinks_beers) + " and the " + random_select(drinks_beers) + ", or are you the sort that prefers a Bud Light?"
+    "beer": beers_on_tap
     "coors": "CHUG! CHUG! CHUG! CHUG!"
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "keg": "Are you sure that isn't a bit much for one person?"
@@ -90,7 +114,9 @@ bartender = (userAuth, selfId, roomId) ->
     "tom collins": "Alright, that'll be $7 please"
     "vodka": "One double of Stoli on the rocks, coming right up!"
     "wine": "Here, try some of our finest Chardonnay!"
-    
+  
+  special_drinks["beers"] = beers_on_tap
+  
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize
