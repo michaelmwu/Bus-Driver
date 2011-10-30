@@ -95,7 +95,7 @@ bartender = (userAuth, selfId, roomId) ->
     i = r.rand(n_beers)
     j = r.rand(n_beers-1)
     k = (i + j) % n_beers
-    "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers a " + random_select(drinks_crappy_beers)
+    "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers a " + random_select(drinks_crappy_beers) + "?"
   
   
   special_drinks = 
@@ -114,6 +114,7 @@ bartender = (userAuth, selfId, roomId) ->
     "tom collins": "Alright, that'll be $7 please"
     "vodka": "One double of Stoli on the rocks, coming right up!"
     "wine": "Here, try some of our finest Chardonnay!"
+    "rand": -> "Random Number: " + r.rand(100)
   
   special_drinks["beers"] = beers_on_tap
   
