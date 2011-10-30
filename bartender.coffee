@@ -158,6 +158,7 @@ bartender = (userAuth, selfId, roomId) ->
     drinks_vodkas
     drinks_wines
   ]
+  all_drinks = _un.flatten(all_drinks)
   
   n_beers = drinks_beers.length
   beers_on_tap = ->
