@@ -159,7 +159,7 @@ bartender = (userAuth, selfId, roomId) ->
     drinks_wines
   ]
   all_drinks = _un.flatten(all_drinks)
-  lc_all_drinks = _un.map(all_drinks, function (str)-> str.toLowerCase())
+  lc_all_drinks = _un.map(all_drinks, (str)-> str.toLowerCase())
   
   n_beers = drinks_beers.length
   beers_on_tap = ->
