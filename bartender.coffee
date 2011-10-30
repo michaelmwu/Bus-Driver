@@ -62,14 +62,20 @@ bartender = (userAuth, selfId, roomId) ->
   ]
   
   drinks_beers = [
+    "Allagash Triple Reserve"
     "Deschutes Abyss"
     "Dogfish Head 90-Minute IPA"
     "Dogfish Head Midas' Touch"
+    "Dogfish Head Punkin Ale"
     "Gorden Biersch Pilsner"
     "Green Flash West Coast IPA"
     "Heineken"
+    "Lagunitas India Pale Ale"
+    "North Coast Rasputin Imperial Stout"
     "Pyramid Hefeweizen"
     "Rogue Dead Guy Ale"
+    "Samuel Smith Oatmeal Stout"
+    "Spaten Optimator Dark"
     "Stone Leviation Pale Ale"
     "Stone Ruination"
   ]
@@ -119,7 +125,7 @@ bartender = (userAuth, selfId, roomId) ->
     i = r.rand(n_beers)
     j = r.rand(n_beers-1)
     k = (i + j) % n_beers
-    "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers a " + random_select(drinks_crappy_beers) + "?"
+    "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers a frosty " + random_select(drinks_crappy_beers) + "?"
   
   wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
@@ -192,9 +198,10 @@ bartender = (userAuth, selfId, roomId) ->
       if typeof selection is "object"
         selection = random_select(selection)
     else
-      selection = random_select(msgs)
-      if !args and args.trim() isnt ""
-        bot.speak "I'm all out of " + args + "!"
+      if args and args.trim() isnt ""
+        selection =  "I'm all out of that, how about something else?"
+      else
+        selection = random_select(msgs)
     
     if typeof selection is "function"
       selection = selection()
