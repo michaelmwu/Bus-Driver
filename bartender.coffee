@@ -120,12 +120,28 @@ bartender = (userAuth, selfId, roomId) ->
     "Heitz Cab Martha's 06"
   ]
   
+  toasts = [
+    "Here's to you, here's to me: friends forever we shall be. If we ever disagree, F*CK YOU, here's to me!"
+    "TO BILL BRASKY!"
+    "To War, Women, and Witticism: May you always know when to pull out!"
+    "May the best of your past be the worst of your future!"
+    "Skål!"
+    "To the nights we can't remember, with the friends we'll never forget!"
+    "To our wives we love and our girlfriends we adore - may they never meet!"
+    "Champagne for our real frinds, real pain for our sham friends!"
+    "May the road rise up to meet you, may the wind always be at your back, and may the rain fall soft upon your fields"
+    "Blindness to our enemies!"
+    "To infinity, and beyond!"
+    "Here's to being single, seeing double, and seeing triple!"
+    "To good times making bad decisions!"
+  ]
+  
   n_beers = drinks_beers.length
   beers_on_tap = ->
     i = r.rand(n_beers)
     j = r.rand(n_beers-1)
     k = (i + j) % n_beers
-    "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers a frosty " + random_select(drinks_crappy_beers) + "?"
+    "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers " + random_select(drinks_crappy_beers) + "?"
   
   wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
@@ -134,26 +150,35 @@ bartender = (userAuth, selfId, roomId) ->
     "bloody mary": "You know how spicy I make these, right?"
     "4loko": "Are you ready to get SLAMMED?"
     "amf": "Say 'Adios', motherf*cker!"
+    "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
     "coors": "CHUG! CHUG! CHUG! CHUG!"
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "irish car bomb": "Hey, the IRA might have some use for you!"
+    "jager bomb": "Take what you can, and give nothing back!"
     "keg": "Are you sure that isn't a bit much for one person?"
     "mai tai": "Drink enough of these and you might think you're a tiki"
     "martini": "The 007 special, coming right up!"
     "mimosa": "It's always 11AM somewhere, right?"
     "natty": "Alright, one 'beer' coming right up..."
     "on me": "Hey everyone, this guy is buying you all a round!"
+    "peanuts": "/me slides over the complimentary peanuts"
     "pop": "Are you sure you didn't mean a SODA?"
     "pretzels": "/me places complimentary pretzels on counter"
     "red-headed slut": "A fan of the gingers, are we?"
     "redbull & vodka": "Party it up in hurrrrrr"
+    "rum": "You've been here for hours...guess where all the rum has gone?"
+    "rum & coke": "You look troubled, do you want me to make it a double?"
     "rum runner": "On vacation, or just pretending to be?"
     "sake bomb" : "HIROSHIMA, NAGASAKI, SAKE SAKE BOMB!"
-    "shitty beer": "One " + random_select(drinks_crappy_beers) + " coming right up!"
+    "shitty beer": -> "One frosty " + random_select(drinks_crappy_beers) + " coming right up!"
     "sidecar": "One sidecar, coming right up!"
+    "tequila": "Watch out, tequila will make your clothes fall off!"
+    "tequila sunrise": "One tequila sunrise, coming right up!"
+    "toast": -> "" + random_select(toasts)
     "scotch": -> "/me pours a double of " + random_select(drinks_scotches)
     "soda": -> "Not drinking tonight? Have a " + random_select(drinks_sodas) + "!"
+    "tequila": "Tequila makes your clothes fall off!"
     "tom collins": "Alright, that'll be $7 please"
     "vodka": "One double of Stoli on the rocks, coming right up!"
     "white russian": "Yeah, but can you go drink-for-drink with The Dude?"
