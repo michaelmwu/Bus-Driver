@@ -227,6 +227,7 @@ bartender = (userAuth, selfId, roomId) ->
     "tom collins": "Alright, that'll be $7 please"
     "vodka": -> "One double of " + random_select(drinks_vodkas) + " on the rocks, coming right up!"
     "vodka tonic": -> "A " + random_select(drinks_vodkas) + " and Tonic, coming right up!"
+    "water":"ಠ_ಠ  Hey, isn't this the PARTY bus?"
     "white russian": "Yeah, but can you go drink-for-drink with The Dude?"
     "wine": wines
   
