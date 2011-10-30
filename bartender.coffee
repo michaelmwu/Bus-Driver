@@ -138,7 +138,7 @@ bartender = (userAuth, selfId, roomId) ->
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "keg": "Are you sure that isn't a bit much for one person?"
     "martini": "The 007 special, coming right up!"
-    "mimosa": "It's always 11AM somewhere, right?
+    "mimosa": "It's always 11AM somewhere, right?"
     "natty": "Alright, one 'beer' coming right up..."
     "on me": "Hey everyone, this guy is buying you all a round!"
     "pop": "Are you sure you didn't mean a SODA?"
