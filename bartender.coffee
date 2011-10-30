@@ -88,8 +88,8 @@ bartender = (userAuth, selfId, roomId) ->
     lcDrink = args.toLowerCase()
     
     if lcDrink of special_drinks {
-      var selection = special_drinks[lcDrink]
-      var drink_type = typeof selection;
+      selection = special_drinks[lcDrink]
+      drink_type = typeof selection;
       if (drink_type === 'object')
         bot.speak random_select(selection)
       else
