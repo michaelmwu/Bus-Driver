@@ -61,8 +61,10 @@ bartender = (userAuth, selfId, roomId) ->
     "Keystone Light"
     "Miller"
     "Miller Lite"
-    "Natty"
-    "Natty Light"
+    "Natural"
+    "Natural Ice"
+    "Natural Light"
+    "Rolling Rock"
   ]
   
   drinks_gins = [
@@ -171,9 +173,9 @@ bartender = (userAuth, selfId, roomId) ->
   wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
   special_drinks = 
+    "4loko": "Are you ready to get SLAMMED?"
     "7&7": "One Seven & Seven, coming right up!"
     "bloody mary": "You know how spicy I make these, right?"
-    "4loko": "Are you ready to get SLAMMED?"
     "amf": "Say 'Adios', motherf*cker!"
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
@@ -187,9 +189,9 @@ bartender = (userAuth, selfId, roomId) ->
     "lemonade": "Just like your mother used to make you!"
     "mai tai": "Drink enough of these and you might think you're a tiki"
     "martini": "The 007 special, coming right up!"
-    "milk": "Hold up, lemme go check on the cow out back"
+    "milk": "Hold up, lemme go check on the cows in the undercarriage"
     "mimosa": "It's always 11AM somewhere, right?"
-    "mojito": "Welcome to Miami!"
+    "mojito": "Next stop, Havana!"
     "natty": "Alright, one 'beer' coming right up..."
     "on me": "Hey everyone, this guy is buying you all a round!"
     "peanuts": "/me slides over the complimentary peanuts"
@@ -200,7 +202,7 @@ bartender = (userAuth, selfId, roomId) ->
     "redbull": "Redbull gives you wiiiiiiiiiiings"
     "redbull & vodka": "Party it up in hurrrrrr!"
     "rum": "You've been here for hours...guess why the rum is gone?"
-    "rum & coke": "You look troubled, do you want me to make it a double?"
+    "rum & coke": "That's a troubled look you're giving me, do you want me to make it a double?"
     "rum runner": "On vacation, or just pretending to be?"
     "sake bomb" : "HIROSHIMA, NAGASAKI, SAKE SAKE BOMB!"
     "shitty beer": -> "One frosty " + random_select(drinks_crappy_beers) + " coming right up!"
@@ -212,7 +214,7 @@ bartender = (userAuth, selfId, roomId) ->
     "tequila sunrise": "One tequila sunrise, coming right up!"
     "tom collins": "Alright, that'll be $7 please"
     "vodka": -> "One double of " + random_select(drinks_vodkas) + " on the rocks, coming right up!"
-    "vodka tonic": -> "A " + random_select(drinks_vodkas) + " and tonic, coming right up!"
+    "vodka tonic": -> "A " + random_select(drinks_vodkas) + " and Tonic, coming right up!"
     "white russian": "Yeah, but can you go drink-for-drink with The Dude?"
     "wine": wines
   
