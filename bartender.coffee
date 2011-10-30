@@ -159,6 +159,7 @@ bartender = (userAuth, selfId, roomId) ->
     drinks_wines
   ]
   all_drinks = _un.flatten(all_drinks)
+  lc_all_drinks = _un.map(all_drinks, function (str)-> str.toLowerCase())
   
   n_beers = drinks_beers.length
   beers_on_tap = ->
@@ -183,8 +184,10 @@ bartender = (userAuth, selfId, roomId) ->
     "irish car bomb": "Hey, the IRA might have some use for you!"
     "jager bomb": "Take what you can, and give nothing back!"
     "keg": "Are you sure that isn't a bit much for one person?"
+    "lemonade": "Just like your mother used to make you!"
     "mai tai": "Drink enough of these and you might think you're a tiki"
     "martini": "The 007 special, coming right up!"
+    "milk": "Hold up, lemme go check on the cow out back"
     "mimosa": "It's always 11AM somewhere, right?"
     "mojito": "Welcome to Miami!"
     "natty": "Alright, one 'beer' coming right up..."
@@ -256,7 +259,7 @@ bartender = (userAuth, selfId, roomId) ->
       "/me cuts a lime"
     ]
     
-    lcDrink = args.toLowerCase()
+    lcDrink = args.trim().toLowerCase()
     
     selection = null
     
@@ -265,8 +268,8 @@ bartender = (userAuth, selfId, roomId) ->
       if typeof selection is "object"
         selection = random_select(selection)
     else
-      if args and args.trim() isnt ""
-        index = _un.indexOf(all_drinks,args.trim())
+      if lcDrink and lcDrink isnt ""
+        index = _un.indexOf(lc_all_drinks,lcDrink)
         if index < 0
           selection =  "I'm all out of that, how about something else?"
         else
