@@ -250,7 +250,7 @@ bartender = (userAuth, selfId, roomId) ->
       "To good times making bad decisions!"
       "Here's to the ships and women of our land: may the former be well-rigged, and the latter well-manned!"
       "May you be in heaven for half an hour before the devil knows you're dead!"
-      "May all the ups and downs in your life happen between the sheets!"
+      "May all the ups and downs in life happen between the sheets!"
       "My friends are of the best kind: loyal, willing, and able. Now let's get to drinking, glasses off the table!"
       "Start your livers...get set...go!"
       "Here's to #{user.name}: may he live respected and die regretted!"
@@ -261,7 +261,7 @@ bartender = (userAuth, selfId, roomId) ->
   # Match regexes
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
-    {cmd: /^\/toast?$/, fn: cmd_toast, help: "toast!"}
+    {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
   ]
   
   bartender.commands = commands
