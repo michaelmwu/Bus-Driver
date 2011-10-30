@@ -30,9 +30,21 @@ bartender = (userAuth, selfId, roomId) ->
   random_select = (list) ->
     list[Math.floor(Math.random()*list.length)]
   
+  special_drinks = 
+    "beer": "Tap specials today are the Rogue Dead Guy Ale and the Pyramid Hefeweizen (or do you drink Bud Light?)"
+    "wine": "Here, try some of our finest Chardonnay!"
+    "vodka": "One double of Stoli on the rocks, coming right up!"
+    "scotch": "/me pours #{user.name} a double of Laphroaig 16"
+    "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
+    "amf": "Say 'Adios', motherf*cker!"
+    "4loko": "Are you ready to get SLAMMED #{user.name}?"
+    "natty": "Alright, one \"beer\" coming right up..."
+	"coors": "CHUG! CHUG! CHUG! CHUG!"
+    "redbull & vodka": "Party it up in hurrrrrr"
+  
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
-      # We just joined, initialize things
+      # We just joined, initialize
       bot.roomInfo (data) ->
         # Initialize users
         for user in data.users
@@ -67,7 +79,12 @@ bartender = (userAuth, selfId, roomId) ->
       "/me wipes a glass"
       "/me cuts a lime"
     ]
-    bot.speak random_select(msgs)
+    
+	lcDrink = toLowerCase(args)
+    if lcDrink of special_drinks
+      bot.speak  special_drinks[lcDrink]
+    else
+      bot.speak random_select(msgs)
     bot.vote "up"
   
   # TODO, match regexes, and have a hidden, so commands automatically lists
