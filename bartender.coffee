@@ -102,6 +102,9 @@ bartender = (userAuth, selfId, roomId) ->
     "Dr. Pepper"
     "Fanta"
     "Ginger Ale"
+    "Mountain Dew"
+    "Pepsi"
+    "Sierra Mist"
     "Sprite"
   ]
   
@@ -148,6 +151,13 @@ bartender = (userAuth, selfId, roomId) ->
     "Joseph Perrier Champagne Josephine '02 "
     "Ch Cos d'Estournel '05 St Estephe"
     "Heitz Cab Martha's 06"
+    "Chardonnay"
+    "Cabernet Sauvignon"
+    "Franzia"
+    "Pinot Noir"
+    "Port"
+    "Sauvignon Blanc"
+    "Syrah"
   ]
   
   all_drinks = [
@@ -180,6 +190,7 @@ bartender = (userAuth, selfId, roomId) ->
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
     "coors": "CHUG! CHUG! CHUG! CHUG!"
+    "Franzia": "CHUG! CHUG! CHUG! CHUG!"
     "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
     "gin & tonic": -> "Here's a " + random_select(drinks_gins) + " and Tonic! Would you like some lime in that?"
     "grey goose": "Only the finest for you, huh?"
@@ -205,6 +216,7 @@ bartender = (userAuth, selfId, roomId) ->
     "rum & coke": "That's a troubled look you're giving me, do you want me to make it a double?"
     "rum runner": "On vacation, or just pretending to be?"
     "sake bomb" : "HIROSHIMA, NAGASAKI, SAKE SAKE BOMB!"
+    "sex on the beach": "If you're under 18, I could just dry-hump you on the beach..."
     "shitty beer": -> "One frosty " + random_select(drinks_crappy_beers) + " coming right up!"
     "sidecar": "One sidecar, coming right up!"
     "screwdriver": -> "One " + random_select(drinks_vodkas) + " and OJ coming at you!"
