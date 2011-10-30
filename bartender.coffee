@@ -87,22 +87,20 @@ bartender = (userAuth, selfId, roomId) ->
     
     lcDrink = args.toLowerCase()
     
-    if lcDrink of special_drinks {
+    if lcDrink of special_drinks
       selection = special_drinks[lcDrink]
-      drink_type = typeof selection;
-      if (drink_type === 'object')
+      if typeof selection is "object"
         bot.speak random_select(selection)
       else
         bot.speak selection
-    }
-    else {
+    else
       bot.speak random_select(msgs)
-    }
+    
     bot.vote "up"
   
-  # TODO, match regexes, and have a hidden, so commands automatically lists
+  # Match regexes
   commands = [
-    {cmd: "/drinks", fn: cmd_drinks, help: "drinks"}
+    {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
   ]
   
   bartender.commands = commands
