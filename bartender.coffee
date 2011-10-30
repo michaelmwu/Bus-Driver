@@ -2,6 +2,7 @@ Bot = require 'ttapi'
 _un = require 'underscore'
 util = require 'util'
 r = require 'mersenne'
+$ = require 'JQuery'
 
 
 bartender = (userAuth, selfId, roomId) ->
