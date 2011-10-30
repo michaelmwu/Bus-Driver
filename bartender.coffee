@@ -1,10 +1,9 @@
 Bot = require 'ttapi'
-irc = require 'irc'
 _un = require 'underscore'
 util = require 'util'
 
 
-bartender = (userAuth, selfId, roomId, ircServer, ircChan, ircHandle="bartender") ->
+bartender = (userAuth, selfId, roomId) ->
   if not userAuth
     util.puts("User auth token required")
     util.exit
@@ -18,9 +17,6 @@ bartender = (userAuth, selfId, roomId, ircServer, ircChan, ircHandle="bartender"
     util.exit
   
   bot = new Bot userAuth, selfId, roomId
-
-  ircClient = new irc.Client ircServer, ircHandle, 
-    channels: [ircChan]
   
   roomUsernames = {}
   roomUsers = {}
@@ -47,7 +43,7 @@ bartender = (userAuth, selfId, roomId, ircServer, ircChan, ircHandle="bartender"
       roomUsernames[user.name] = user
       roomUsers[user.userid] = user
   
-  cmd_drinks = (user) ->
+  cmd_drinks = (user, args) ->
     msgs = [
       "This party is bumping! Drinks all around!"
       "Hey #{user.name}, here's a little something to get you rocking!"
