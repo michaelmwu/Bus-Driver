@@ -1,6 +1,7 @@
 Bot = require 'ttapi'
 _un = require 'underscore'
 util = require 'util'
+r = require 'mersenne'
 
 
 bartender = (userAuth, selfId, roomId) ->
@@ -28,10 +29,7 @@ bartender = (userAuth, selfId, roomId) ->
       ''
   
   random_select = (list) ->
-    list[Math.floor(Math.random()*list.length)]
-  
-  random_select2 = (list2) ->
-    list2[Math.floor(Math.random()*list2.length)]
+    list[r.random(list.length)]
   
   drinks_scotches = [
     "Aberlour 12"
@@ -79,7 +77,7 @@ bartender = (userAuth, selfId, roomId) ->
   special_drinks = 
     "4loko": "Are you ready to get SLAMMED?"
     "amf": "Say 'Adios', motherf*cker!"
-    "beer": -> "Tap specials today are the " + random_select(drinks_beers) + " and the " + random_select2(drinks_beers) + ", or are you the sort that prefers a Bud Light?"
+    "beer": -> "Tap specials today are the " + random_select(drinks_beers) + " and the " + random_select(drinks_beers) + ", or are you the sort that prefers a Bud Light?"
     "coors": "CHUG! CHUG! CHUG! CHUG!"
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "keg": "Are you sure that isn't a bit much for one person?"
