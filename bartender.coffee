@@ -74,7 +74,7 @@ bartender = (userAuth, selfId, roomId) ->
   ]
   
   special_drinks = 
-    "beer": -> "Tap specials today are the " + random_select(drinks_beers) + " and the " + random_selection(drinks_beers) + " (or do you drink Bud Light?)"
+    "beer": -> "Tap specials today are the " + random_select(drinks_beers) + " and the " + random_select(drinks_beers) + " (or do you drink Bud Light?)"
     "wine": "Here, try some of our finest Chardonnay!"
     "vodka": "One double of Stoli on the rocks, coming right up!"
     "scotch": -> "/me pours a double of " + random_select(drinks_scotches)
@@ -139,7 +139,7 @@ bartender = (userAuth, selfId, roomId) ->
     else
       selection = random_select(msgs)
       if args != null
-        bot.speak args
+        bot.speak "I'm all out of " + args + "!"
         
     
     if typeof selection is "function"
