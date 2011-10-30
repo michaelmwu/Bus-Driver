@@ -165,7 +165,7 @@ bartender = (userAuth, selfId, roomId) ->
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
     "coors": "CHUG! CHUG! CHUG! CHUG!"
-    "gin": "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
+    "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
     "gin & tonic": -> "Here's a " + random_select(drinks_gins) + " and Tonic! Would you like some lime in that?"
     "grey goose": "Only the finest for you, huh?"
     "irish car bomb": "Hey, the IRA might have some use for you!"
