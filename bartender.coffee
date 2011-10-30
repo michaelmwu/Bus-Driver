@@ -84,11 +84,35 @@ bartender = (userAuth, selfId, roomId) ->
     "Keystone Ice"
     "Keystone Light"
     "Miller"
-    "Miller Light"
+    "Miller Lite"
     "Natty"
     "Natty Light"
   ]
   
+  drinks_wines = [
+    "Vanel Sauvignon Blanc '10"
+    "Sonoma Hills Chardonnay '09"
+    "Yellow Tail Shiraz '08"
+    "Keenan Chardonnay '08"
+    "La Crema Chardonnay '09"
+    "Fratelli Casa Rossa"
+    "Paul Masson Rhine Castle"
+    "Ch Ste Michelle Cabernet '08"
+    "Kendall-Jackson Cabernet Grand Res '07"
+    "Cinnabar Mercury Rising '08"
+    "Zinnia Pinot Noir Reserve '10"
+    "Tikal Patriota '09"
+    "Tedeschi Maui Blanc Pineapple Wine"
+    "Salon Champagne '97"
+    "Dominus '08"
+    "Robert Hall Syrah '08"
+    "Altocedro Malbec Grand Reserva '08"
+    "Catena Zapata '07"
+    "Louis Roederer Cristal Brut '02"
+    "Joseph Perrier Champagne Josephine '02 "
+    "Ch Cos d'Estournel '05 St Estephe"
+    "Heitz Cab Martha's 06"
+  ]
   
   n_beers = drinks_beers.length
   beers_on_tap = ->
@@ -97,6 +121,7 @@ bartender = (userAuth, selfId, roomId) ->
     k = (i + j) % n_beers
     "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers a " + random_select(drinks_crappy_beers) + "?"
   
+  wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
   special_drinks = 
     "4loko": "Are you ready to get SLAMMED?"
@@ -105,6 +130,7 @@ bartender = (userAuth, selfId, roomId) ->
     "coors": "CHUG! CHUG! CHUG! CHUG!"
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "keg": "Are you sure that isn't a bit much for one person?"
+    "martini": "The 007 special, coming right up!"
     "natty": "Alright, one 'beer' coming right up..."
     "pop": "Are you sure you didn't mean a SODA?"
     "redbull & vodka": "Party it up in hurrrrrr"
@@ -113,10 +139,10 @@ bartender = (userAuth, selfId, roomId) ->
     "soda": -> "Not drinking tonight? Here, have a " + random_select(drinks_sodas)
     "tom collins": "Alright, that'll be $7 please"
     "vodka": "One double of Stoli on the rocks, coming right up!"
-    "wine": "Here, try some of our finest Chardonnay!"
-    "rand": -> "Random Number: " + r.rand(100)
+    "wine": wines
   
   special_drinks["beers"] = beers_on_tap
+  special_drinks["wines"] = wines
   
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
