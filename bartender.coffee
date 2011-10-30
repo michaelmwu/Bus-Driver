@@ -51,7 +51,7 @@ bartender = (userAuth, selfId, roomId) ->
     "beer": "Tap specials today are the Rogue Dead Guy Ale and the Pyramid Hefeweizen (or do you drink Bud Light?)"
     "wine": "Here, try some of our finest Chardonnay!"
     "vodka": "One double of Stoli on the rocks, coming right up!"
-    "scotch": "/me pours a double of " + random_select(scotches)
+    "scotch": -> "/me pours a double of " + random_select(scotches)
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "amf": "Say 'Adios', motherf*cker!"
     "4loko": "Are you ready to get SLAMMED?"
@@ -104,14 +104,19 @@ bartender = (userAuth, selfId, roomId) ->
     
     lcDrink = args.toLowerCase()
     
+    selection = null
+    
     if lcDrink of special_drinks
       selection = special_drinks[lcDrink]
       if typeof selection is "object"
-        bot.speak random_select(selection)
-      else
-        bot.speak selection
+        selection = random_select(selection)
     else
-      bot.speak random_select(msgs)
+      selection = random_select(msgs)
+    
+    if typeof selection is "function"
+      selection = selection()
+    
+    bot.speak selection
     
     bot.vote "up"
   
