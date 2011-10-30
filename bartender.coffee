@@ -30,6 +30,9 @@ bartender = (userAuth, selfId, roomId) ->
   random_select = (list) ->
     list[Math.floor(Math.random()*list.length)]
   
+  random_select2 = (list) ->
+    list[Math.floor(Math.random()*list.length)]
+  
   drinks_scotches = [
     "Aberlour 12"
     "Bowmore Darkest Sherry Finish"
@@ -51,13 +54,13 @@ bartender = (userAuth, selfId, roomId) ->
   ]
   
   drinks_sodas = [
-    "Coca-Cola"
-    "Sprite"
     "7-Up"
-    "Fanta"
-    "Dr. Pepper"
+    "Coca-Cola"
     "Diet Coke"
+    "Dr. Pepper"
+    "Fanta"
     "Ginger Ale"
+    "Sprite"
   ]
   
   drinks_beers = [
@@ -74,19 +77,22 @@ bartender = (userAuth, selfId, roomId) ->
   ]
   
   special_drinks = 
-    "beer": -> "Tap specials today are the " + random_select(drinks_beers) + " and the " + random_select(drinks_beers) + " (or do you drink Bud Light?)"
-    "wine": "Here, try some of our finest Chardonnay!"
-    "vodka": "One double of Stoli on the rocks, coming right up!"
-    "scotch": -> "/me pours a double of " + random_select(drinks_scotches)
-    "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
-    "amf": "Say 'Adios', motherf*cker!"
     "4loko": "Are you ready to get SLAMMED?"
-    "natty": "Alright, one 'beer' coming right up..."
+    "amf": "Say 'Adios', motherf*cker!"
+    "beer": -> "Tap specials today are the " + random_select(drinks_beers) + " and the " + random_select2(drinks_beers) + ", or are you the sort that prefers a Bud Light?"
     "coors": "CHUG! CHUG! CHUG! CHUG!"
-    "redbull & vodka": "Party it up in hurrrrrr"
-    "soda": -> "Not drinking tonight? Here, have a " + random_select(drinks_sodas)
-    "pop": "Are you sure you didn't mean a SODA?"
+    "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "keg": "Are you sure that isn't a bit much for one person?"
+    "natty": "Alright, one 'beer' coming right up..."
+    "pop": "Are you sure you didn't mean a SODA?"
+    "redbull & vodka": "Party it up in hurrrrrr"
+    "sidecar": "One sidecar, coming right up!"
+    "scotch": -> "/me pours a double of " + random_select(drinks_scotches)
+    "soda": -> "Not drinking tonight? Here, have a " + random_select(drinks_sodas)
+    "tom collins": "Alright, that'll be $7 please"
+    "vodka": "One double of Stoli on the rocks, coming right up!"
+    "wine": "Here, try some of our finest Chardonnay!"
+    
     
     
   bot.on "registered", (data) ->
@@ -138,7 +144,7 @@ bartender = (userAuth, selfId, roomId) ->
         selection = random_select(selection)
     else
       selection = random_select(msgs)
-      if args != null
+      if !args and args.trim() isn't ""
         bot.speak "I'm all out of " + args + "!"
         
     
