@@ -41,7 +41,11 @@ bartender = (userAuth, selfId, roomId) ->
     "natty": "Alright, one 'beer' coming right up..."
     "coors": "CHUG! CHUG! CHUG! CHUG!"
     "redbull & vodka": "Party it up in hurrrrrr"
-  
+    "soda": ["Mmm, nothing like a Coca-Cola", "Why not take a break and have some Sprite", "OK, here's a Dr. Pepper"]
+    "pop": "Are you sure you didn't mean a SODA?"
+    "keg": "Are you sure that isn't a bit much for one person?"
+    
+    
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize
@@ -76,15 +80,24 @@ bartender = (userAuth, selfId, roomId) ->
       "Here's a Flaming Doctor Pepper!"
       "Margarita coming right up"
       "We've got a great selection on this bus!"
+      "/me ices #{user.name}"
       "/me wipes a glass"
       "/me cuts a lime"
     ]
     
     lcDrink = args.toLowerCase()
-    if lcDrink of special_drinks
-      bot.speak  special_drinks[lcDrink]
-    else
+    
+    if lcDrink of special_drinks {
+      var selection = special_drinks[lcDrink]
+      var drink_type = typeof selection;
+      if (drink_type === 'object')
+        bot.speak random_select(selection)
+      else
+        bot.speak selection
+    }
+    else {
       bot.speak random_select(msgs)
+    }
     bot.vote "up"
   
   # TODO, match regexes, and have a hidden, so commands automatically lists
