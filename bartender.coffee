@@ -261,6 +261,7 @@ bartender = (userAuth, selfId, roomId) ->
   # Match regexes
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
+    {cmd: /^\/toast?$/, fn: cmd_toast, help: "toast!"}
   ]
   
   bartender.commands = commands
