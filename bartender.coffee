@@ -31,6 +31,7 @@ bartender = (userAuth, selfId, roomId) ->
     list[Math.floor(Math.random()*list.length)]
   
   drinks_scotches = [
+    "Aberlour 12"
     "Bowmore Darkest Sherry Finish"
     "Glenmorangie 18"
     "Highland Park 12"
@@ -47,7 +48,7 @@ bartender = (userAuth, selfId, roomId) ->
     "Macallan 12 Fine Oak"
     "Macallan 15 Fine Oak"
     "Macallan 18 Fine Oak"
-    ]
+  ]
   
   drinks_sodas = [
     "Coca-Cola"
@@ -59,8 +60,21 @@ bartender = (userAuth, selfId, roomId) ->
     "Ginger Ale"
   ]
   
+  drinks_beers = [
+    "Deschutes Abyss"
+    "Dogfish Head 90-Minute IPA"
+    "Dogfish Head Midas' Touch"
+    "Gorden Biersch Pilsner"
+    "Green Flash West Coast IPA"
+    "Heineken"
+    "Pyramid Hefeweizen"
+    "Rogue Dead Guy Ale"
+    "Stone Leviation Pale Ale"
+    "Stone Ruination"
+  ]
+  
   special_drinks = 
-    "beer": "Tap specials today are the Rogue Dead Guy Ale and the Pyramid Hefeweizen (or do you drink Bud Light?)"
+    "beer": -> "Tap specials today are the " + random_select(drinks_beers) + " and the " + random_selection(drinks_beers) + " (or do you drink Bud Light?)"
     "wine": "Here, try some of our finest Chardonnay!"
     "vodka": "One double of Stoli on the rocks, coming right up!"
     "scotch": -> "/me pours a double of " + random_select(drinks_scotches)
@@ -125,7 +139,7 @@ bartender = (userAuth, selfId, roomId) ->
     else
       selection = random_select(msgs)
       if args != null
-        bot.speak "I don't have that available, sorry!"
+        bot.speak args
         
     
     if typeof selection is "function"
