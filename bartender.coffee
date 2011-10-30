@@ -29,7 +29,7 @@ bartender = (userAuth, selfId, roomId) ->
       ''
   
   random_select = (list) ->
-    list[r.random(list.length)]
+    list[r.rand(list.length)]
   
   drinks_scotches = [
     "Aberlour 12"
