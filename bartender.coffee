@@ -265,10 +265,11 @@ bartender = (userAuth, selfId, roomId) ->
         selection = random_select(selection)
     else
       if args and args.trim() isnt ""
-        if lcdrink of all_drinks
-          selection = args
-        else
+        index = $.inArray(args.trim(), all_drinks)
+        if index < 0
           selection =  "I'm all out of that, how about something else?"
+        else
+          selection = "One " + all_drinks[index] + ", coming right up!"
       else
         selection = random_select(msgs)
     
