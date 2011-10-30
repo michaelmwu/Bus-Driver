@@ -80,7 +80,7 @@ bartender = (userAuth, selfId, roomId) ->
       "/me cuts a lime"
     ]
     
-    lcDrink = toLowerCase(args)
+    lcDrink = args.toLowerCase()
     if lcDrink of special_drinks
       bot.speak  special_drinks[lcDrink]
     else
