@@ -130,6 +130,7 @@ bartender = (userAuth, selfId, roomId) ->
   wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
   special_drinks = 
+    "bloody mary": "Hmmm, you sure you want that?"
     "4loko": "Are you ready to get SLAMMED?"
     "amf": "Say 'Adios', motherf*cker!"
     "beer": beers_on_tap
@@ -137,14 +138,19 @@ bartender = (userAuth, selfId, roomId) ->
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
     "keg": "Are you sure that isn't a bit much for one person?"
     "martini": "The 007 special, coming right up!"
+    "mimosa": "It's always 11AM somewhere, right?
     "natty": "Alright, one 'beer' coming right up..."
+    "on me": "Hey everyone, this guy is buying you all a round!"
     "pop": "Are you sure you didn't mean a SODA?"
+    "red-headed slut": "A fan of the gingers, are we?"
     "redbull & vodka": "Party it up in hurrrrrr"
+    "sake bomb" : "HIROSHIMA, NAGASAKI, SAKE SAKE BOMB!"
     "sidecar": "One sidecar, coming right up!"
     "scotch": -> "/me pours a double of " + random_select(drinks_scotches)
     "soda": -> "Not drinking tonight? Here, have a " + random_select(drinks_sodas)
     "tom collins": "Alright, that'll be $7 please"
     "vodka": "One double of Stoli on the rocks, coming right up!"
+    "white russian": "Yeah, but can you go drink-for-drink with The Dude?"
     "wine": wines
   
   special_drinks["beers"] = beers_on_tap
@@ -167,7 +173,7 @@ bartender = (userAuth, selfId, roomId) ->
     msgs = [
       "This party is bumping! Drinks all around!"
       "Hey #{user.name}, here's a little something to get you rocking!"
-      "Martini, shaken, not stirred."
+      "Martini: shaken, not stirred."
       "Scotch neat"
       "Jager bombs! Jager bombs!"
       "Hey #{user.name}, I think you might have had a little too much to drink"
