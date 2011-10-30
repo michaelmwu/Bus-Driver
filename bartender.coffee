@@ -120,22 +120,6 @@ bartender = (userAuth, selfId, roomId) ->
     "Heitz Cab Martha's 06"
   ]
   
-  toasts = [
-    "Here's to you, here's to me: friends forever we shall be. If we ever disagree, F*CK YOU, here's to me!"
-    "TO BILL BRASKY!"
-    "To War, Women, and Witticism: May you always know when to pull out!"
-    "May the best of your past be the worst of your future!"
-    "Skål!"
-    "To the nights we can't remember, with the friends we'll never forget!"
-    "To our wives we love and our girlfriends we adore - may they never meet!"
-    "Champagne for our real frinds, real pain for our sham friends!"
-    "May the road rise up to meet you, may the wind always be at your back, and may the rain fall soft upon your fields"
-    "Blindness to our enemies!"
-    "To infinity, and beyond!"
-    "Here's to being single, seeing double, and seeing triple!"
-    "To good times making bad decisions!"
-  ]
-  
   n_beers = drinks_beers.length
   beers_on_tap = ->
     i = r.rand(n_beers)
@@ -154,6 +138,7 @@ bartender = (userAuth, selfId, roomId) ->
     "beer": beers_on_tap
     "coors": "CHUG! CHUG! CHUG! CHUG!"
     "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
+    "grey goose": "Only the finest for you, huh?"
     "irish car bomb": "Hey, the IRA might have some use for you!"
     "jager bomb": "Take what you can, and give nothing back!"
     "keg": "Are you sure that isn't a bit much for one person?"
@@ -163,11 +148,12 @@ bartender = (userAuth, selfId, roomId) ->
     "natty": "Alright, one 'beer' coming right up..."
     "on me": "Hey everyone, this guy is buying you all a round!"
     "peanuts": "/me slides over the complimentary peanuts"
+    "pbr": "I've got this other beer here you've probably never heard of, why don't you try that?"
     "pop": "Are you sure you didn't mean a SODA?"
     "pretzels": "/me places complimentary pretzels on counter"
     "red-headed slut": "A fan of the gingers, are we?"
     "redbull & vodka": "Party it up in hurrrrrr"
-    "rum": "You've been here for hours...guess where all the rum has gone?"
+    "rum": "You've been here for hours...guess why the rum is gone?"
     "rum & coke": "You look troubled, do you want me to make it a double?"
     "rum runner": "On vacation, or just pretending to be?"
     "sake bomb" : "HIROSHIMA, NAGASAKI, SAKE SAKE BOMB!"
@@ -175,7 +161,6 @@ bartender = (userAuth, selfId, roomId) ->
     "sidecar": "One sidecar, coming right up!"
     "tequila": "Watch out, tequila will make your clothes fall off!"
     "tequila sunrise": "One tequila sunrise, coming right up!"
-    "toast": -> "" + random_select(toasts)
     "scotch": -> "/me pours a double of " + random_select(drinks_scotches)
     "soda": -> "Not drinking tonight? Have a " + random_select(drinks_sodas) + "!"
     "tequila": "Tequila makes your clothes fall off!"
@@ -245,6 +230,32 @@ bartender = (userAuth, selfId, roomId) ->
     
     bot.speak selection
     
+    bot.vote "up"
+  
+  cmd_toast = (user,args) ->
+    toasts = [
+      "Here's to you, here's to me: friends forever we shall be. If we ever disagree, F*CK YOU, here's to me!"
+      "TO BILL BRASKY!"
+      "To War, Women, and Witticism: May you always know when to pull out!"
+      "May the best of your past be the worst of your future!"
+      "Skål!"
+      "To the nights we can't remember, with the friends we'll never forget!"
+      "To our wives we love and our girlfriends we adore - may they never meet!"
+      "Champagne for our real frinds, real pain for our sham friends!"
+      "May the road rise up to meet you, may the wind always be at your back, and may the rain fall soft upon your fields"
+      "May Those that love us love us, may those that don't love us, may the Lord turn their hearts. And if he can't turn their hearts may he turn their ankles...so we know them by their limping"
+      "Blindness to our enemies!"
+      "To infinity, and beyond!"
+      "Here's to being single, seeing double, and seeing triple!"
+      "To good times making bad decisions!"
+      "Here's to the ships and women of our land: may the former be well-rigged, and the latter well-manned!"
+      "May you be in heaven for half an hour before the devil knows you're dead!"
+      "May all the ups and downs in your life happen between the sheets!"
+      "My friends are of the best kind: loyal, willing, and able. Now let's get to drinking, glasses off the table!"
+      "Start your livers...get set...go!"
+      "Here's to #{user.name}: may he live respected and die regretted!"
+    ]
+    bot.speak random_select(toasts)
     bot.vote "up"
   
   # Match regexes
