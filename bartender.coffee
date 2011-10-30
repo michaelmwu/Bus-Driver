@@ -73,42 +73,6 @@ bartender = (userAuth, selfId, roomId) ->
     "Tanqueray 10"
   ]
   
-  drinks_vodkas = [
-    "Absolut Orange"
-    "Belvedere"
-    "Grey Goose La Poire"
-    "Ketel One"
-    "Smirnoff"
-    "Stoli"
-    "Stoli Elit"
-    "Three Olives"
-  ]
-  
-  drinks_wines = [
-    "Vanel Sauvignon Blanc '10"
-    "Sonoma Hills Chardonnay '09"
-    "Yellow Tail Shiraz '08"
-    "Keenan Chardonnay '08"
-    "La Crema Chardonnay '09"
-    "Fratelli Casa Rossa"
-    "Paul Masson Rhine Castle"
-    "Ch Ste Michelle Cabernet '08"
-    "Kendall-Jackson Cabernet Grand Res '07"
-    "Cinnabar Mercury Rising '08"
-    "Zinnia Pinot Noir Reserve '10"
-    "Tikal Patriota '09"
-    "Tedeschi Maui Blanc Pineapple Wine"
-    "Salon Champagne '97"
-    "Dominus '08"
-    "Robert Hall Syrah '08"
-    "Altocedro Malbec Grand Reserva '08"
-    "Catena Zapata '07"
-    "Louis Roederer Cristal Brut '02"
-    "Joseph Perrier Champagne Josephine '02 "
-    "Ch Cos d'Estournel '05 St Estephe"
-    "Heitz Cab Martha's 06"
-  ]
-  
   drinks_scotches = [
     "Aberlour 12"
     "Bowmore Darkest Sherry Finish"
@@ -146,6 +110,53 @@ bartender = (userAuth, selfId, roomId) ->
     "Jose Cuervo Black Medallion"
     "Milagro Añejo"
     "Patron"
+  ]
+  
+  drinks_vodkas = [
+    "Absolut Orange"
+    "Belvedere"
+    "Grey Goose La Poire"
+    "Ketel One"
+    "Smirnoff"
+    "Stoli"
+    "Stoli Elit"
+    "Three Olives"
+  ]
+  
+  drinks_wines = [
+    "Vanel Sauvignon Blanc '10"
+    "Sonoma Hills Chardonnay '09"
+    "Yellow Tail Shiraz '08"
+    "Keenan Chardonnay '08"
+    "La Crema Chardonnay '09"
+    "Fratelli Casa Rossa"
+    "Paul Masson Rhine Castle"
+    "Ch Ste Michelle Cabernet '08"
+    "Kendall-Jackson Cabernet Grand Res '07"
+    "Cinnabar Mercury Rising '08"
+    "Zinnia Pinot Noir Reserve '10"
+    "Tikal Patriota '09"
+    "Tedeschi Maui Blanc Pineapple Wine"
+    "Salon Champagne '97"
+    "Dominus '08"
+    "Robert Hall Syrah '08"
+    "Altocedro Malbec Grand Reserva '08"
+    "Catena Zapata '07"
+    "Louis Roederer Cristal Brut '02"
+    "Joseph Perrier Champagne Josephine '02 "
+    "Ch Cos d'Estournel '05 St Estephe"
+    "Heitz Cab Martha's 06"
+  ]
+  
+  all_drinks = [
+    drinks_beers
+    drinks_crappy_beers
+    drinks_gins
+    drinks_scotches
+    drinks_sodas
+    drinks_tequilas
+    drinks_vodkas
+    drinks_wines
   ]
   
   n_beers = drinks_beers.length
@@ -254,7 +265,10 @@ bartender = (userAuth, selfId, roomId) ->
         selection = random_select(selection)
     else
       if args and args.trim() isnt ""
-        selection =  "I'm all out of that, how about something else?"
+        if lcdrink of all_drinks
+          selection = args
+        else
+          selection =  "I'm all out of that, how about something else?"
       else
         selection = random_select(msgs)
     
