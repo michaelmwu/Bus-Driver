@@ -31,36 +31,6 @@ bartender = (userAuth, selfId, roomId) ->
   random_select = (list) ->
     list[r.rand(list.length)]
   
-  drinks_scotches = [
-    "Aberlour 12"
-    "Bowmore Darkest Sherry Finish"
-    "Glenmorangie 18"
-    "Highland Park 12"
-    "Highland Park 15"
-    "Johnny Walker Black Label"
-    "Johnny Walker Blue Label"
-    "Johnny Walker Gold Label"
-    "Laphroaig 10"
-    "Laphroaig 16"
-    "Laphroaig 18"
-    "Laphroaig Quarter Cask"
-    "Lagavulin 16"
-    "Macallan 10"
-    "Macallan 12 Fine Oak"
-    "Macallan 15 Fine Oak"
-    "Macallan 18 Fine Oak"
-  ]
-  
-  drinks_sodas = [
-    "7-Up"
-    "Coca-Cola"
-    "Diet Coke"
-    "Dr. Pepper"
-    "Fanta"
-    "Ginger Ale"
-    "Sprite"
-  ]
-  
   drinks_beers = [
     "Allagash Triple Reserve"
     "Deschutes Abyss"
@@ -95,6 +65,25 @@ bartender = (userAuth, selfId, roomId) ->
     "Natty Light"
   ]
   
+  drinks_gins = [
+    "Beefeater"
+    "Bombay Sapphire"
+    "Hendricks"
+    "Magellan"
+    "Tanqueray 10"
+  ]
+  
+  drinks_vodkas = [
+    "Absolut Orange"
+    "Belvedere"
+    "Grey Goose La Poire"
+    "Ketel One"
+    "Smirnoff"
+    "Stoli"
+    "Stoli Elit"
+    "Three Olives"
+  ]
+  
   drinks_wines = [
     "Vanel Sauvignon Blanc '10"
     "Sonoma Hills Chardonnay '09"
@@ -120,6 +109,45 @@ bartender = (userAuth, selfId, roomId) ->
     "Heitz Cab Martha's 06"
   ]
   
+  drinks_scotches = [
+    "Aberlour 12"
+    "Bowmore Darkest Sherry Finish"
+    "Glenmorangie 18"
+    "Highland Park 12"
+    "Highland Park 15"
+    "Johnny Walker Black Label"
+    "Johnny Walker Blue Label"
+    "Johnny Walker Gold Label"
+    "Laphroaig 10"
+    "Laphroaig 16"
+    "Laphroaig 18"
+    "Laphroaig Quarter Cask"
+    "Lagavulin 16"
+    "Macallan 10"
+    "Macallan 12 Fine Oak"
+    "Macallan 15 Fine Oak"
+    "Macallan 18 Fine Oak"
+  ]
+  
+  drinks_sodas = [
+    "7-Up"
+    "Coca-Cola"
+    "Diet Coke"
+    "Dr. Pepper"
+    "Fanta"
+    "Ginger Ale"
+    "Sprite"
+  ]
+  
+  drinks_tequilas = [
+    "1800 Silver"
+    "Don Eduardo Silver"
+    "Jose Cuerve Gold Label"
+    "Jose Cuervo Black Medallion"
+    "Milagro Añejo"
+    "Patron"
+  ]
+  
   n_beers = drinks_beers.length
   beers_on_tap = ->
     i = r.rand(n_beers)
@@ -137,7 +165,8 @@ bartender = (userAuth, selfId, roomId) ->
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
     "coors": "CHUG! CHUG! CHUG! CHUG!"
-    "gin & tonic": "Here's a Gin & Tonic! Would you like some lime in that?"
+    "gin": "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
+    "gin & tonic": "Here's a " + random_select(drinks_gins) + " and Tonic! Would you like some lime in that?"
     "grey goose": "Only the finest for you, huh?"
     "irish car bomb": "Hey, the IRA might have some use for you!"
     "jager bomb": "Take what you can, and give nothing back!"
@@ -145,32 +174,37 @@ bartender = (userAuth, selfId, roomId) ->
     "mai tai": "Drink enough of these and you might think you're a tiki"
     "martini": "The 007 special, coming right up!"
     "mimosa": "It's always 11AM somewhere, right?"
+    "mojito": "Welcome to Miami!"
     "natty": "Alright, one 'beer' coming right up..."
     "on me": "Hey everyone, this guy is buying you all a round!"
     "peanuts": "/me slides over the complimentary peanuts"
-    "pbr": "I've got this other beer here you've probably never heard of, why don't you try that?"
+    "pbr": "I've got this other beer here you've probably never heard of, why don't you try that instead?"
     "pop": "Are you sure you didn't mean a SODA?"
     "pretzels": "/me places complimentary pretzels on counter"
     "red-headed slut": "A fan of the gingers, are we?"
-    "redbull & vodka": "Party it up in hurrrrrr"
+    "redbull": "Redbull gives you wiiiiiiiiiiings"
+    "redbull & vodka": "Party it up in hurrrrrr!"
     "rum": "You've been here for hours...guess why the rum is gone?"
     "rum & coke": "You look troubled, do you want me to make it a double?"
     "rum runner": "On vacation, or just pretending to be?"
     "sake bomb" : "HIROSHIMA, NAGASAKI, SAKE SAKE BOMB!"
     "shitty beer": -> "One frosty " + random_select(drinks_crappy_beers) + " coming right up!"
     "sidecar": "One sidecar, coming right up!"
-    "tequila": "Watch out, tequila will make your clothes fall off!"
+    "tequila": "Watch out, tequila will make your clothes fall off, so here's a shot of " + random_select(drinks_tequilas) + "!"
     "tequila sunrise": "One tequila sunrise, coming right up!"
-    "scotch": -> "/me pours a double of " + random_select(drinks_scotches)
+    "screwdriver": "One " + random_select(drinks_vodkas) + " and OJ coming at you!"
+    "scotch": -> "/me pours a double of " + random_select(drinks_scotches) + ", neat"
     "soda": -> "Not drinking tonight? Have a " + random_select(drinks_sodas) + "!"
     "tequila": "Tequila makes your clothes fall off!"
     "tom collins": "Alright, that'll be $7 please"
-    "vodka": "One double of Stoli on the rocks, coming right up!"
+    "vodka": "One double of " + random_select(drinks_vodkas) + " on the rocks, coming right up!"
+    "vodka tonic": "A " + random_select(drinks_vodkas) + " and tonic, coming right up!"
     "white russian": "Yeah, but can you go drink-for-drink with The Dude?"
     "wine": wines
   
   special_drinks["beers"] = beers_on_tap
   special_drinks["wines"] = wines
+  special_drinks["redbull vodka"] = "Party it up in hurrrrrr!"
   
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
