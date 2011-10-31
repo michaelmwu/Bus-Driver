@@ -264,7 +264,7 @@ bartender = (userAuth, selfId, roomId) ->
       "We've got a great selection of beer here."
       "A cape cod huh. Is it that time of the month?"
       "Here's some hard cider"
-      "#{user.name}, do you need me to call a cab"
+      "#{user.name}, you might need to find your own ride home after this..."
       "Ah a Belgian. How about the St. Bernardus 12"
       "Irish Car Bomb for you"
       "Hey #{user.name}, here's a White Russian"
@@ -328,10 +328,14 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak random_select(toasts)
     bot.vote "up"
   
+  cmd_power = (user,args) -> bot.speak "My scouter says this #{user.name}'s power level is....... hold on that can't be possible..... IT'S OVER 9000!!!!!!!!!!!!!!!!!!!!!!!"
+    
+  
   # Match regexes
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
+    {cmd: /^\/power$/, fn: cmd_power, help: "pwr lvl"}
   ]
   
   bartender.commands = commands
