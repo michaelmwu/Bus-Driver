@@ -152,7 +152,7 @@ bartender = (userAuth, selfId, roomId) ->
     "Louis Roederer Cristal Brut '02"
     "Joseph Perrier Champagne Josephine '02 "
     "Ch Cos d'Estournel '05 St Estephe"
-    "Heitz Cab Martha's 06"
+    "Heitz Cab Martha's '06"
     "Chardonnay"
     "Cabernet Sauvignon"
     "Franzia"
@@ -192,7 +192,7 @@ bartender = (userAuth, selfId, roomId) ->
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
     "coors": "CHUG! CHUG! CHUG! CHUG!"
-    "Franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
+    "franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
     "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
     "gin & tonic": -> "Here's a " + random_select(drinks_gins) + " and Tonic! Would you like some lime in that?"
     "grey goose": "Only the finest for you, huh?"
