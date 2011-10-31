@@ -210,13 +210,14 @@ bartender = (userAuth, selfId, roomId) ->
     "pop": "Are you sure you didn't mean a SODA?"
     "pretzels": "/me places complimentary pretzels on counter"
     "red-headed slut": "A fan of the gingers, are we?"
-    "redbull": "Redbull gives you wiiiiiiiiiiings"
+    "redbull": "Redbull gives you WIIIIIIIINGS"
     "redbull & vodka": "Party it up in hurrrrrr!"
     "rum": "You've been here for hours...guess why the rum is gone?"
     "rum & coke": "That's a troubled look you're giving me, do you want me to make it a double?"
     "rum runner": "On vacation, or just pretending to be?"
     "sake bomb" : "HIROSHIMA, NAGASAKI, SAKE SAKE BOMB!"
     "sex on the beach": "If you're under 18, I could just dry-hump you on the beach..."
+    "sexy sundae": (user)-> "'Sexy' and '#{user.name}' never belong together, sorry"
     "shitty beer": -> "One frosty " + random_select(drinks_crappy_beers) + " coming right up!"
     "sidecar": "One sidecar, coming right up!"
     "screwdriver": -> "One " + random_select(drinks_vodkas) + " and OJ coming at you!"
@@ -293,7 +294,7 @@ bartender = (userAuth, selfId, roomId) ->
         selection = random_select(msgs)
     
     if typeof selection is "function"
-      selection = selection()
+      selection = selection(user)
     
     bot.speak selection
     
@@ -306,7 +307,7 @@ bartender = (userAuth, selfId, roomId) ->
       "To War, Women, and Witticism: May you always know when to pull out!"
       "May the best of your past be the worst of your future!"
       "Skål!"
-      "To the nights we can't remember, with the friends we'll never forget!"
+      "To the nights we can't remember with the friends we'll never forget!"
       "To our wives we love and our girlfriends we adore - may they never meet!"
       "Champagne for our real frinds, real pain for our sham friends!"
       "May the road rise up to meet you, may the wind always be at your back, and may the rain fall soft upon your fields"
