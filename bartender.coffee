@@ -56,6 +56,8 @@ bartender = (userAuth, selfId, roomId) ->
     "Budweiser"
     "Coors"
     "Coors Light"
+    "Corona"
+    "Dos Equis"
     "Keystone"
     "Keystone Ice"
     "Keystone Light"
@@ -191,7 +193,7 @@ bartender = (userAuth, selfId, roomId) ->
     "amf": "Say 'Adios', motherf*cker!"
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
-    "coors": "CHUG! CHUG! CHUG! CHUG!"
+    "natty": "CHUG! CHUG! CHUG! CHUG!"
     "franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
     "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
     "gin & tonic": -> "Here's a " + random_select(drinks_gins) + " and Tonic! Would you like some lime in that?"
@@ -299,7 +301,6 @@ bartender = (userAuth, selfId, roomId) ->
       selection = selection(user)
     
     bot.speak selection
-    
     bot.vote "up"
   
   cmd_toast = (user,args) ->
@@ -328,7 +329,9 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak random_select(toasts)
     bot.vote "up"
   
-  cmd_power = (user,args) -> bot.speak "My scouter says this #{args}'s power level is....... hold on that can't be possible..... IT'S OVER 9000!!!!!!!!!!!!!!!!!!!!!!!"
+  cmd_power = (user,args) -> 
+    if #{user.name} is "ZealousFM"
+      bot.speak "My scouter says #{args}'s power level is....... hold on that can't be possible..... IT'S OVER 9000!!!!!!!!!!!!!!!!!!!!!!!"
     
   
   # Match regexes
