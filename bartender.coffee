@@ -312,7 +312,7 @@ bartender = (userAuth, selfId, roomId) ->
       "Skål!"
       "To the nights we can't remember with the friends we'll never forget!"
       "To our wives we love and our girlfriends we adore - may they never meet!"
-      "Champagne for our real frinds, real pain for our sham friends!"
+      "Champagne for our real friends, real pain for our sham friends!"
       "May the road rise up to meet you, may the wind always be at your back, and may the rain fall soft upon your fields"
       "May Those that love us love us, may those that don't love us, may the Lord turn their hearts. And if he can't turn their hearts may he turn their ankles...so we know them by their limping"
       "Blindness to our enemies!"
