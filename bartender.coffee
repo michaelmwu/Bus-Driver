@@ -331,7 +331,11 @@ bartender = (userAuth, selfId, roomId) ->
     bot.vote "up"
   
   cmd_power = (user,args) -> 
+<<<<<<< HEAD
     if "#{user.name}" is "ZealousFM"
+=======
+    if ""+#{user.name} is "ZealousFM"
+>>>>>>> 7e128c8c6fa77497d9f6fded8ca5d187fe30e182
       bot.speak "My scouter says #{args}'s power level is....... hold on that can't be possible..... IT'S OVER 9000!!!!!!!!!!!!!!!!!!!!!!!"
     
   
