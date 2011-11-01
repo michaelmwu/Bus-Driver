@@ -181,8 +181,8 @@ bartender = (userAuth, selfId, roomId) ->
   n_beers = drinks_beers.length
   beers_on_tap = ->
     i = r.rand(n_beers)
-    j = r.rand(n_beers-1)
-    k = (i + j) % n_beers
+    j = r.rand(n_beers-2)
+    k = (i + j + 1) % n_beers
     "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers " + random_select(drinks_crappy_beers) + "?"
   
   wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
