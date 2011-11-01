@@ -195,7 +195,7 @@ bartender = (userAuth, selfId, roomId) ->
     "amf": "Say 'Adios', motherf*cker!"
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
-    "everclear" - "This stuff isn't usually taken in shot form, but I guess if you're that much of an alcoholic..."
+    "everclear" -> "This stuff isn't usually taken in shot form, but I guess if you're that much of an alcoholic..."
     "franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
     "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
     "gin & tonic": -> "Here's a " + random_select(drinks_gins) + " and Tonic! Would you like some lime in that?"
