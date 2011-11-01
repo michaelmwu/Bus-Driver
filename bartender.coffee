@@ -188,13 +188,14 @@ bartender = (userAuth, selfId, roomId) ->
   wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
   special_drinks = 
+    "151": "Dude, are you that guy that does the firebreathing thing?"
     "4loko": "Are you ready to get SLAMMED?"
     "7&7": "One Seven & Seven, coming right up!"
     "bloody mary": "You know how spicy I make these, right?"
     "amf": "Say 'Adios', motherf*cker!"
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
-    "natty": "CHUG! CHUG! CHUG! CHUG!"
+    "everclear" - "This stuff isn't usually taken in shot form, but I guess if you're that much of an alcoholic..."
     "franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
     "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
     "gin & tonic": -> "Here's a " + random_select(drinks_gins) + " and Tonic! Would you like some lime in that?"
@@ -210,6 +211,7 @@ bartender = (userAuth, selfId, roomId) ->
     "mojito": "Next stop, Havana!"
     "natty": "Alright, one 'beer' coming right up..."
     "on me": (user) -> "Everyone order up, this round's on #{user.name}!"
+    "own piss": (user) -> "#{user.name}: Goes to party with a full bar, drinks own piss"
     "peanuts": "/me slides over the complimentary peanuts"
     "pbr": "I've got this other beer here you've probably never heard of, why don't you try that instead?"
     "pop": "Are you sure you didn't mean a SODA?"
