@@ -1,4 +1,4 @@
-Bot = require 'ttapi'
+﻿Bot = require 'ttapi'
 _un = require 'underscore'
 util = require 'util'
 r = require 'mersenne'
@@ -327,9 +327,6 @@ bartender = (userAuth, selfId, roomId) ->
     ]
     bot.speak random_select(toasts)
     bot.vote "up"
-  
-  cmd_power = (user,args) -> bot.speak "My scouter says this #{args}'s power level is....... hold on that can't be possible..... IT'S OVER 9000!!!!!!!!!!!!!!!!!!!!!!!"
-    
   
   # Match regexes
   commands = [
