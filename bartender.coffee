@@ -46,6 +46,7 @@ bartender = (userAuth, selfId, roomId) ->
     "Rogue Dead Guy Ale"
     "Samuel Smith Oatmeal Stout"
     "Spaten Optimator Dark"
+    "Stone Arrogant Basterd"
     "Stone Leviation Pale Ale"
     "Stone Ruination"
     "Young's Double Chocolate Stout"
