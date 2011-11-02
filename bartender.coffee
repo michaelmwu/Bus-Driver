@@ -48,6 +48,7 @@ bartender = (userAuth, selfId, roomId) ->
     "Spaten Optimator Dark"
     "Stone Leviation Pale Ale"
     "Stone Ruination"
+    "Young's Double Chocolate Stout"
   ]
   
   
@@ -56,6 +57,8 @@ bartender = (userAuth, selfId, roomId) ->
     "Budweiser"
     "Coors"
     "Coors Light"
+    "Corona"
+    "Dos Equis"
     "Keystone"
     "Keystone Ice"
     "Keystone Light"
@@ -178,20 +181,21 @@ bartender = (userAuth, selfId, roomId) ->
   n_beers = drinks_beers.length
   beers_on_tap = ->
     i = r.rand(n_beers)
-    j = r.rand(n_beers-1)
-    k = (i + j) % n_beers
+    j = r.rand(n_beers-2)
+    k = (i + j + 1) % n_beers
     "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers " + random_select(drinks_crappy_beers) + "?"
   
   wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
   special_drinks = 
+    "151": "Dude, are you that guy that does the firebreathing thing?"
     "4loko": "Are you ready to get SLAMMED?"
     "7&7": "One Seven & Seven, coming right up!"
     "bloody mary": "You know how spicy I make these, right?"
     "amf": "Say 'Adios', motherf*cker!"
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
-    "coors": "CHUG! CHUG! CHUG! CHUG!"
+    "everclear": "This stuff isn't usually taken in shot form, but I guess if you're that much of an alcoholic..."
     "franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
     "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
     "gin & tonic": -> "Here's a " + random_select(drinks_gins) + " and Tonic! Would you like some lime in that?"
@@ -207,6 +211,7 @@ bartender = (userAuth, selfId, roomId) ->
     "mojito": "Next stop, Havana!"
     "natty": "Alright, one 'beer' coming right up..."
     "on me": (user) -> "Everyone order up, this round's on #{user.name}!"
+    "own piss": (user) -> "#{user.name}: Goes to party with a full bar, drinks own piss"
     "peanuts": "/me slides over the complimentary peanuts"
     "pbr": "I've got this other beer here you've probably never heard of, why don't you try that instead?"
     "pop": "Are you sure you didn't mean a SODA?"
@@ -299,7 +304,6 @@ bartender = (userAuth, selfId, roomId) ->
       selection = selection(user)
     
     bot.speak selection
-    
     bot.vote "up"
   
   cmd_toast = (user,args) ->
@@ -332,7 +336,6 @@ bartender = (userAuth, selfId, roomId) ->
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
-    {cmd: /^\/power$/, fn: cmd_power, help: "pwr lvl"}
   ]
   
   bartender.commands = commands
