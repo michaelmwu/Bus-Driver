@@ -197,7 +197,7 @@ bartender = (userAuth, selfId, roomId) ->
   ]
   
   foods = 
-    "": "What would you like to eat, #{user.name}?"
+    "": "What would you like to eat?"
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "cinnabon": -> random_select(cinnabuns)
     "cinnabons": -> random_select(cinnabuns)
