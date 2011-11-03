@@ -1,4 +1,4 @@
-﻿Bot = require 'ttapi'
+Bot = require 'ttapi'
 _un = require 'underscore'
 util = require 'util'
 r = require 'mersenne'
@@ -334,7 +334,7 @@ bartender = (userAuth, selfId, roomId) ->
       "Here's to being single, seeing double, and seeing triple!"
       "To good times making bad decisions!"
       "Here's to the ships and women of our land: may the former be well-rigged, and the latter well-manned!"
-      "May you be in heaven for half an hour before the devil knows you're dead!"
+      "May you be in heaven for half an hou:r before the devil knows you're dead!"
       "May all the ups and downs in life happen between the sheets!"
       "My friends are of the best kind: loyal, willing, and able. Now let's get to drinking, glasses off the table!"
       "Start your livers...get set...go!"
@@ -343,14 +343,14 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak random_select(toasts)
     bot.vote "up"
   
-  cmd_selecta
+  cmd_selecta = ->
     bot.speak "SELECTA!"
   
   # Match regexes
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
-    {cmd: /^\/selecta/, fn: cmd_selecta, help: "SELECTA!"}
+    {cmd: "/selecta", fn: cmd_selecta, help: "SELECTA!"}
   ]
   
   bartender.commands = commands
