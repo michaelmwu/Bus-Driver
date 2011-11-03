@@ -192,8 +192,15 @@ bartender = (userAuth, selfId, roomId) ->
     "Your favorite pastry?"
     "You are, a Cinnabon, I could eat you forever"
     "I could eat for a lifetime"
+    "You are, a Cinnabon, a microwave treasure"
     "d-_-b, get outta here"
   ]
+  
+  foods = 
+    "cinnabon": -> random_select(cinnabuns)
+    "cinnabons": -> random_select(cinnabuns)
+    "peanuts": "/me slides over the complimentary peanuts"
+    "pretzels": "/me places complimentary pretzels on counter"
   
   special_drinks = 
     "151": "Dude, are you that guy that does the firebreathing thing?"
@@ -203,8 +210,6 @@ bartender = (userAuth, selfId, roomId) ->
     "amf": "Say 'Adios', motherf*cker!"
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
-    "cinnabon": -> random_select(cinnabuns)
-    "cinnabons": -> random_select(cinnabuns)
     "everclear": "This stuff isn't usually taken in shot form, but I guess if you're that much of an alcoholic..."
     "franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
     "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
@@ -222,10 +227,8 @@ bartender = (userAuth, selfId, roomId) ->
     "natty": "Alright, one 'beer' coming right up..."
     "on me": (user) -> "Everyone order up, this round's on #{user.name}!"
     "own piss": (user) -> "#{user.name}: Goes to party with a full bar, drinks own piss"
-    "peanuts": "/me slides over the complimentary peanuts"
     "pbr": "I've got this other beer here you've probably never heard of, why don't you try that instead?"
     "pop": "Are you sure you didn't mean a SODA?"
-    "pretzels": "/me places complimentary pretzels on counter"
     "red-headed slut": "A fan of the gingers, are we?"
     "redbull": "Redbull gives you WIIIIIIIINGS"
     "redbull & vodka": "Party it up in hurrrrrr!"
@@ -346,11 +349,23 @@ bartender = (userAuth, selfId, roomId) ->
   cmd_selecta = ->
     bot.speak "SELECTA!"
   
+  cmd_eat = (user,args) ->
+    lcFood = args.trim().toLowerCase()
+    selection = null
+    
+    if lcFood of foods
+      selection = foods[lcFood]
+      bot.vote "up"
+    else
+      selection = "We don't serve your kind here!"
+      bot.vote "down"
+  
   # Match regexes
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
     {cmd: "/selecta", fn: cmd_selecta, help: "SELECTA!"}
+    {cmd: /^\/eats?$/, fn: cmd_eat, help: "drinks"}
   ]
   
   bartender.commands = commands
