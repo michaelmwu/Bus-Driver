@@ -226,6 +226,7 @@ bartender = (userAuth, selfId, roomId) ->
     "sake bomb" : "HIROSHIMA, NAGASAKI, SAKE SAKE BOMB!"
     "sex on the beach": "If you're under 18, I could just dry-hump you on the beach..."
     "sexy sundae": (user)-> "'Sexy' and '#{user.name}' never belong together, sorry!"
+    "soup": "NO SOUP FOR YOU"
     "shitty beer": -> "One frosty " + random_select(drinks_crappy_beers) + " coming right up!"
     "sidecar": "One sidecar, coming right up!"
     "screwdriver": -> "One " + random_select(drinks_vodkas) + " and OJ coming at you!"
