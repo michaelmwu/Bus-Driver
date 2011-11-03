@@ -188,6 +188,12 @@ bartender = (userAuth, selfId, roomId) ->
   
   wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
+  galgal (user) ->
+    if "#{user.name}" isnt "GalGal"
+      "Hey, that's GalGal's drink!"
+    else
+      "Your favorite drink!"
+  
   cinnabuns = [
     "Your favorite pastry?"
     "You are, a Cinnabon, I could eat you forever"
@@ -200,7 +206,9 @@ bartender = (userAuth, selfId, roomId) ->
     "cinnabon": -> random_select(cinnabuns)
     "cinnabons": -> random_select(cinnabuns)
     "peanuts": "/me slides over the complimentary peanuts"
+    "pizza": "Bringing the best of NY to a bus near you!"
     "pretzels": "/me places complimentary pretzels on counter"
+    "steak": -> "Personally, I prefer you run a cow by me and just let me go at it with a fork"
   
   special_drinks = 
     "151": "Dude, are you that guy that does the firebreathing thing?"
@@ -210,6 +218,7 @@ bartender = (userAuth, selfId, roomId) ->
     "amf": "Say 'Adios', motherf*cker!"
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
+    "brooklyn lager": galgal
     "everclear": "This stuff isn't usually taken in shot form, but I guess if you're that much of an alcoholic..."
     "franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
     "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
@@ -355,10 +364,14 @@ bartender = (userAuth, selfId, roomId) ->
     
     if lcFood of foods
       selection = foods[lcFood]
-      bot.vote "up"
     else
       selection = "We don't serve your kind here!"
-      bot.vote "down"
+    
+    if typeof selection is "function"
+      selection = selection(user)
+    
+    bot.speak selection
+    bot.vote "up"
   
   # Match regexes
   commands = [
