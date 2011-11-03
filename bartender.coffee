@@ -186,18 +186,19 @@ bartender = (userAuth, selfId, roomId) ->
     k = (i + j + 1) % n_beers
     "Tap specials are the " + drinks_beers[i] + " and the " + drinks_beers[k] + ", or are you the sort that prefers " + random_select(drinks_crappy_beers) + "?"
   
-  wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
-  
-  
   cinnabuns = [
+    "I could eat you for a lifetime"
+    "You are my favorite pastry"
     "Your favorite pastry?"
     "You are, a Cinnabon, I could eat you forever"
-    "I could eat for a lifetime"
+    "Icing, cinnamon, I could eat you forever"
     "You are, a Cinnabon, a microwave treasure"
     "d-_-b, get outta here"
   ]
   
   foods = 
+    "": "What would you like to eat, #{user.name}?"
+    "bacon": "Tuesday nights we have free bacon at the bar!"
     "cinnabon": -> random_select(cinnabuns)
     "cinnabons": -> random_select(cinnabuns)
     "peanuts": "/me slides over the complimentary peanuts"
@@ -211,7 +212,6 @@ bartender = (userAuth, selfId, roomId) ->
     "7&7": "One Seven & Seven, coming right up!"
     "bloody mary": "You know how spicy I make these, right?"
     "amf": "Say 'Adios', motherf*cker!"
-    "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
     "brooklyn lager": "GalGal can stop telling me to add this to our menu now!"
     "everclear": "This stuff isn't usually taken in shot form, but I guess if you're that much of an alcoholic..."
@@ -255,7 +255,7 @@ bartender = (userAuth, selfId, roomId) ->
     "vodka tonic": -> "A " + random_select(drinks_vodkas) + " and Tonic, coming right up!"
     "water":"ಠ_ಠ  Hey, isn't this the PARTY bus?"
     "white russian": "Yeah, but can you go drink-for-drink with The Dude?"
-    "wine": wines
+    "wine": -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
   special_drinks["beers"] = beers_on_tap
   special_drinks["wines"] = wines
