@@ -259,7 +259,6 @@ bartender = (userAuth, selfId, roomId) ->
     "wine": -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
   special_drinks["beers"] = beers_on_tap
-  special_drinks["wines"] = wines
   special_drinks["redbull vodka"] = "Party it up in hurrrrrr!"
   
   bot.on "registered", (data) ->
