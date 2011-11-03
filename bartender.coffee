@@ -221,6 +221,7 @@ bartender = (userAuth, selfId, roomId) ->
     "grey goose": "Only the finest for you, huh?"
     "irish car bomb": (user) -> "Hey #{user.name} if you like those, the IRA might have some use for you!"
     "jager bomb": "Take what you can, and give nothing back!"
+    "jello shot": "Wait, you gotta do these off of Bus Conductor's belly!"
     "keg": "Are you sure that isn't a bit much for one person?"
     "lemonade": "Just like your mother used to make you!"
     "mai tai": "Drink enough of these and you might think you're a tiki"
