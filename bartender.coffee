@@ -201,6 +201,9 @@ bartender = (userAuth, selfId, roomId) ->
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "cinnabon": -> random_select(cinnabuns)
     "cinnabons": -> random_select(cinnabuns)
+    "cinnabun": -> random_select(cinnabuns)
+    "cinnabuns": -> random_select(cinnabuns)
+    "fish sticks": "What are you, some kind of gay fish?"
     "peanuts": "/me slides over the complimentary peanuts"
     "pizza": "Bringing the best of NY to a bus near you!"
     "pretzels": "/me places complimentary pretzels on counter"
@@ -338,11 +341,11 @@ bartender = (userAuth, selfId, roomId) ->
       "May Those that love us love us, may those that don't love us, may the Lord turn their hearts. And if he can't turn their hearts may he turn their ankles...so we know them by their limping"
       "Blindness to our enemies!"
       "To infinity, and beyond!"
-      "Here's to being single, seeing double, and seeing triple!"
+      "Here's to being single, seeing double, and sleeping triple!"
       "To good times making bad decisions!"
       "Here's to the ships and women of our land: may the former be well-rigged, and the latter well-manned!"
-      "May you be in heaven for half an hou:r before the devil knows you're dead!"
-      "May all the ups and downs in life happen between the sheets!"
+      "May you be in heaven for half an hour before the devil knows you're dead!"
+      "May all your ups and downs in life happen between the sheets!"
       "My friends are of the best kind: loyal, willing, and able. Now let's get to drinking, glasses off the table!"
       "Start your livers...get set...go!"
       "Here's to #{user.name}: may he live respected and die regretted!"
