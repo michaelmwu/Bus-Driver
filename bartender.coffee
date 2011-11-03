@@ -334,10 +334,14 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak random_select(toasts)
     bot.vote "up"
   
+  cmd_selecta
+    bot.speak "SELECTA!"
+  
   # Match regexes
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
+    {cmd: /^\/selecta/, fn: cmd_selecta, help: "SELECTA!"}
   ]
   
   bartender.commands = commands
