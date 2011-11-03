@@ -213,10 +213,8 @@ bartender = (userAuth, selfId, roomId) ->
     "natty": "Alright, one 'beer' coming right up..."
     "on me": (user) -> "Everyone order up, this round's on #{user.name}!"
     "own piss": (user) -> "#{user.name}: Goes to party with a full bar, drinks own piss"
-    "peanuts": "/me slides over the complimentary peanuts"
     "pbr": "I've got this other beer here you've probably never heard of, why don't you try that instead?"
     "pop": "Are you sure you didn't mean a SODA?"
-    "pretzels": "/me places complimentary pretzels on counter"
     "red-headed slut": "A fan of the gingers, are we?"
     "redbull": "Redbull gives you WIIIIIIIINGS"
     "redbull & vodka": "Party it up in hurrrrrr!"
@@ -244,6 +242,12 @@ bartender = (userAuth, selfId, roomId) ->
   special_drinks["beers"] = beers_on_tap
   special_drinks["wines"] = wines
   special_drinks["redbull vodka"] = "Party it up in hurrrrrr!"
+  
+  foods = 
+    "cinnabon": (user) -> "#{user.name}, you are my favorite pastry!"
+    "peanuts": "/me slides over the complimentary peanuts"
+    "pretzels": "/me places complimentary pretzels on counter"
+    
   
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
@@ -334,14 +338,28 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak random_select(toasts)
     bot.vote "up"
   
-  cmd_selecta
+  cmd_selecta ->
     bot.speak "SELECTA!"
+  
+  cmd_eat (user,args) ->
+    lcFood = args.toLowerCase().trim()
+    selection = null
+    
+    if lcFood of foods
+      selection = foods[lcFood]
+      bot.vote "up"
+    else
+      selection = "We don't serve your kind here"
+      bot.vote "down"
+    
+    bot.speak selection
   
   # Match regexes
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
     {cmd: /^\/selecta/, fn: cmd_selecta, help: "SELECTA!"}
+    {cmd: /^\/eats?$/, fn: cmd_eat, help: "eat food"}
   ]
   
   bartender.commands = commands
