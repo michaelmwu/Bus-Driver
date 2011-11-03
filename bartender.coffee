@@ -188,6 +188,13 @@ bartender = (userAuth, selfId, roomId) ->
   
   wines = -> "True connoisseurs will enjoy the subtle flavors of this " + random_select(drinks_wines)
   
+  cinnabuns = [
+    "Your favorite pastry?"
+    "You are, a Cinnabon, I could eat you forever"
+    "I could eat for a lifetime"
+    "d-_-b, get outta here"
+  ]
+  
   special_drinks = 
     "151": "Dude, are you that guy that does the firebreathing thing?"
     "4loko": "Are you ready to get SLAMMED?"
@@ -196,6 +203,8 @@ bartender = (userAuth, selfId, roomId) ->
     "amf": "Say 'Adios', motherf*cker!"
     "bacon": "Tuesday nights we have free bacon at the bar!"
     "beer": beers_on_tap
+    "cinnabon": -> random_select(cinnabuns)
+    "cinnabons": -> random_select(cinnabuns)
     "everclear": "This stuff isn't usually taken in shot form, but I guess if you're that much of an alcoholic..."
     "franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
     "gin": -> "Ahh, the classic drink of alcoholics. Here's a triple of " + random_select(drinks_gins) + "!"
