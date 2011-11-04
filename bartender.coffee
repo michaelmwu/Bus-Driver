@@ -377,12 +377,7 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak selection
     bot.vote "up"
   
-  cmd_burn = (user,args) ->
-    burns = [
-      "#{args}, you're out of your game. I heard you retired, and they named second place after you. BURRRNNNNNN"
-      "By the way #{args}, you still owe me that rent check because of all that time living in my shadow. BURRRNNNNNN"
-    ]
-    
+  cmd_burn = (user,args) ->    
     lcBurn = args.trim().toLowerCase()
     selection = null
     bot.roomInfo (data) ->
@@ -392,9 +387,14 @@ bartender = (userAuth, selfId, roomId) ->
         # Initialize users
         if user = _un.find(data.users, (user) -> norm(user.name) is norm(args))
             
+            burns = [
+              "#{user.name}, you're out of your game. I heard you retired, and they named second place after you. BURRRNNNNNN"
+              "By the way #{user.name}, you still owe me that rent check because of all that time living in my shadow. BURRRNNNNNN"
+            ]
+            
             selection = random_select[burns]
         else
-          selection = "#{args} isn't in this room!"
+          selection = "#{user.name} isn't in this room!"
       else
         selection = "Who got pwned?"
     
