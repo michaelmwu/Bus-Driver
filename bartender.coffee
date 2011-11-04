@@ -216,6 +216,8 @@ bartender = (userAuth, selfId, roomId) ->
     "bloody mary": "You know how spicy I make these, right?"
     "amf": "Say 'Adios', motherf*cker!"
     "beer": beers_on_tap
+    "body shot": "Hold up, have you even asked .Mnml_Pixels yet?"
+    "body shots": "Hold up, have you even asked .Mnml_Pixels yet?"
     "brooklyn lager": "GalGal can stop telling me to add this to our menu now!"
     "everclear": "This stuff isn't usually taken in shot form, but I guess if you're that much of an alcoholic..."
     "franzia": (user)-> "#{user.name} can play Slap Bag like a BOSS!"
@@ -224,7 +226,8 @@ bartender = (userAuth, selfId, roomId) ->
     "grey goose": "Only the finest for you, huh?"
     "irish car bomb": (user) -> "Hey #{user.name} if you like those, the IRA might have some use for you!"
     "jager bomb": "Take what you can, and give nothing back!"
-    "jello shot": "Wait, you gotta do these off of Bus Conductor's belly!"
+    "jello shot": "What flavor would you like?"
+    "jello shots": "What flavor would you like?"
     "keg": "Are you sure that isn't a bit much for one person?"
     "lemonade": "Just like your mother used to make you!"
     "mai tai": "Drink enough of these and you might think you're a tiki"
