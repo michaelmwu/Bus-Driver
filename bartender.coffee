@@ -193,6 +193,7 @@ bartender = (userAuth, selfId, roomId) ->
     "You are, a Cinnabon, I could eat you forever"
     "Icing, cinnamon, I could eat you forever"
     "You are, a Cinnabon, a microwave treasure"
+    "CH-CH-CH-CH-CH-CHOP THE STEAK"
     "d-_-b, get outta here"
   ]
   
@@ -352,6 +353,8 @@ bartender = (userAuth, selfId, roomId) ->
       "My friends are of the best kind: loyal, willing, and able. Now let's get to drinking, glasses off the table!"
       "Start your livers...get set...go!"
       "Here's to #{user.name}: may he live respected and die regretted!"
+      "To alcohol! The cause of, and solution to all of life's problems!"
+      "To good times making bad decisions!"
     ]
     bot.speak random_select(toasts)
     bot.vote "up"
