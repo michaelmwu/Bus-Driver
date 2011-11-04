@@ -388,11 +388,12 @@ bartender = (userAuth, selfId, roomId) ->
         if user = _un.find(data.users, (user) -> norm(user.name) is norm(args))
             
             burns = [
-              "#{user.name}, you're out of your game. I heard you retired, and they named second place after you. BURRRNNNNNN"
-              "By the way #{user.name}, you still owe me that rent check because of all that time living in my shadow. BURRRNNNNNN"
+              "#{user.name}, you're out of your game. I heard you retired, and they named second place after you. BURRRNNNNNN!"
+              "By the way #{user.name}, you still owe me that rent check because of all that time you spent living in my shadow. BURRRNNNNNN!"
+              "Hey I have a question about your hair, #{user.name}. When exactly did Brillo Pads start making toupees? BURRRNNNNNN!"
             ]
             
-            selection = random_select(burns)
+            selection = random_select(  burns)
         else
           selection = "#{user.name} isn't in this room!"
       else
