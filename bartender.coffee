@@ -392,7 +392,7 @@ bartender = (userAuth, selfId, roomId) ->
               "By the way #{user.name}, you still owe me that rent check because of all that time living in my shadow. BURRRNNNNNN"
             ]
             
-            selection = random_select[burns]
+            selection = random_select(burns)
         else
           selection = "#{user.name} isn't in this room!"
       else
