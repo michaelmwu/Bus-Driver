@@ -31,6 +31,9 @@ bartender = (userAuth, selfId, roomId) ->
   random_select = (list) ->
     list[r.rand(list.length)]
   
+  norm = (name) ->
+    name.trim().toLowerCase()
+  
   drinks_beers = [
     "Allagash Triple Reserve"
     "Deschutes Abyss"
@@ -359,9 +362,6 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak random_select(toasts)
     bot.vote "up"
   
-  cmd_selecta = ->
-    bot.speak "SELECTA!"
-  
   cmd_eat = (user,args) ->
     lcFood = args.trim().toLowerCase()
     selection = null
@@ -377,12 +377,37 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak selection
     bot.vote "up"
   
+  cmd_burn = (user,args) ->
+    burns = [
+      "#{args}, you're out of your game. I heard you retired, and they named second place after you. BURRRNNNNNN"
+      "By the way #{args}, you still owe me that rent check because of all that time living in my shadow. BURRRNNNNNN"
+    ]
+    
+    lcBurn = args.trim().toLowerCase()
+    selection = null
+    bot.roomInfo (data) ->
+      name = norm(args)
+      
+      if name isnt ""
+        # Initialize users
+        if user = _un.find(data.users, (user) -> norm(user.name) is norm(args))
+            
+            selection = random_select[burns]
+        else
+          selection = "#{args} isn't in this room!"
+      else
+        selection = "Who got pwned?"
+    
+      bot.speak selection
+    
+    
+  
   # Match regexes
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
-    {cmd: "/selecta", fn: cmd_selecta, help: "SELECTA!"}
     {cmd: /^\/eats?$/, fn: cmd_eat, help: "drinks"}
+    {cmd: /^\/burn$/, fn: cmd_burn, help: "drinks"}
   ]
   
   bartender.commands = commands
