@@ -414,8 +414,15 @@ busDriver = (options) ->
     bot.speak "AWWWWWW YEAHHHHHHH!"
     bot.vote "up"
   
+  dances = [
+    "Erryday I'm Shufflin'"
+    "/me dances"
+    "Teach me how to dougie!"
+    "/me dougies"
+    ]
+  
   cmd_dance = -> 
-    bot.speak "Erryday I'm Shufflin'"
+    bot.speak random_select(dances)
     bot.vote "up"
   
   cmd_djs = (user, args, out) ->
