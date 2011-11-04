@@ -158,12 +158,13 @@ busDriver = (options) ->
 
   greetings =
     ".Mnml_Pixels": "/me awkwardly hugs .Mnml_Pixels"
-    "Cameronish": "/me daps C Murda'"
+    "Cameronish": "/me daps Cameronish"
+    "d-_-b": "It's everybody's favorite cinnabon!"
     "DJ Wooooo": "This party must really be poppin', DJ Wooooo is in the house!"
     "Elletiger": "Watch out, Elletiger is on the prowl!"
     "Frick": "SCATTER! It's bot overlord Frick!"
     "GalGal": "Everyone greet GalGal, the prettiest girl on this PARTY BUS!"
-    "icyhandofcrap": "What is your command, master icy?"
+    "icyhandofcrap": "What is your command, master icyhandofcrap?"
     "IT'S OVER 9000!!!!": "Vegeta, what does the scouter say about his power level? It's OVER 9000!!!!"
     "Jellytime": "It's peanut butter JELLYTIME!"
     "Nick The K": "Hey, I think Nick The K is AFK!"
