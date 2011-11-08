@@ -332,7 +332,7 @@ bartender = (userAuth, selfId, roomId) ->
       selection = selection(user)
     
     bot.speak selection
-    bot.vote "up"
+    
   
   cmd_toast = (user,args) ->
     toasts = [
@@ -360,7 +360,7 @@ bartender = (userAuth, selfId, roomId) ->
       "To good times making bad decisions!"
     ]
     bot.speak random_select(toasts)
-    bot.vote "up"
+    
   
   cmd_eat = (user,args) ->
     lcFood = args.trim().toLowerCase()
@@ -375,7 +375,7 @@ bartender = (userAuth, selfId, roomId) ->
       selection = selection(user)
     
     bot.speak selection
-    bot.vote "up"
+    
   
   cmd_burn = (user,args) ->    
     lcBurn = args.trim().toLowerCase()
