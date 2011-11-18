@@ -4,6 +4,8 @@ _un = require 'underscore'
 util = require 'util'
 readline = require 'readline'
 
+greet = require './greetings'
+
 busDriver = (options) ->
   if not options.userAuth
     util.puts("User auth token required")
@@ -23,8 +25,12 @@ busDriver = (options) ->
   options.ircHandle = options.ircHandle or "BusDriver"
   selfId = options.userId
   
-  ircClient = new irc.Client options.ircServer, options.ircHandle, 
-    channels: [options.ircChan]
+  #ircClient = new irc.Client options.ircServer, options.ircHandle, 
+  #  channels: [options.ircChan]
+  
+  #ircClient.addListener "message", (from, to, message)->
+    # irc handling
+    # no custom commands yet
 
   DJ_MAX_SONGS = 3
   
@@ -156,20 +162,7 @@ busDriver = (options) ->
   # Time to wait before considering a rejoining user to have actually come back
   REJOIN_MESSAGE_WAIT_TIME = 5000
 
-  greetings =
-    ".Mnml_Pixels": "/me awkwardly hugs .Mnml_Pixels"
-    "Cameronish": "/me daps Cameronish"
-    "d-_-b": "It's everybody's favorite cinnabon!"
-    "DJ Wooooo": "This party must really be poppin', DJ Wooooo is in the house!"
-    "Elletiger": "Watch out, Elletiger is on the prowl!"
-    "Frick": "SCATTER! It's bot overlord Frick!"
-    "GalGal": "Everyone greet GalGal, the prettiest girl on this PARTY BUS!"
-    "icyhandofcrap": "What is your command, master icyhandofcrap?"
-    "IT'S OVER 9000!!!!": "Vegeta, what does the scouter say about his power level? It's OVER 9000!!!!"
-    "Jellytime": "It's peanut butter JELLYTIME!"
-    "Nick The K": "Hey, I think Nick The K is AFK!"
-    "sex": "Who wants sex?"
-    "vuther": "Hey, papa vuther is here on the PARTY BUS!"
+  greetings = greet.greetings  
   
   norm = (name) ->
     name.trim().toLowerCase()
@@ -187,6 +180,19 @@ busDriver = (options) ->
   
   get_uid = (name) ->
     roomUsernames[norm(name)]
+  
+  get_greeting = (user) ->
+    greeting = null
+  
+    if user.name of greetings
+      greeting = greetings[user.name]
+    else if user.userid of greetings
+      greeting = greetings[user.userid]
+    
+    if greeting
+      if typeof greeting is "function"
+        greeting = greeting(user)
+      return greeting
   
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
@@ -240,14 +246,14 @@ busDriver = (options) ->
       
     # Only say hello to people that have left more than REJOIN_MESSAGE_WAIT_TIME ago    
     if user.userid isnt selfId and (not roomUsersLeft[user.userid] or now.getTime() - roomUsersLeft[user.userid].getTime() > REJOIN_MESSAGE_WAIT_TIME)
-      if user.userid of vips
+      if greeting = get_greeting(user)
+        delay = ()->
+          bot.speak greeting
+        
+        setTimeout delay, 5000
+      else if user.userid of vips
         delay = ()->
           bot.speak "Welcome #{user.name}, we have a VIP aboard the PARTY BUS!"
-
-        setTimeout delay, 5000
-      else if user.name of greetings
-        delay = ()->
-          bot.speak greetings[user.name]
 
         setTimeout delay, 5000
       else if user.acl > 0
@@ -329,10 +335,6 @@ busDriver = (options) ->
     pastDjSongCount[djId] = { count: djSongCount[djId], when: new Date() }
     delete djSongCount[djId]
     delete campingDjs[djId]
-
-  ircClient.addListener "message", (from, to, message)->
-    # irc handling
-    # no custom commands yet
   
   findDj = (name) ->
     uid = get_uid(name)
@@ -634,13 +636,16 @@ busDriver = (options) ->
     {cmd: "/mods", fn: cmd_mods, help: "lists room mods"}
     {cmd: "/users", fn: cmd_users, help: "counts room users"}
     {cmd: /^\/(timeout|waiting|waitlist)$/, name: "/timeout", fn: cmd_waiting, help: "dj timeout list"}
-    {cmd: "/vuthers", fn: cmd_vuthers, help: "vuther clan roll call"}
     {cmd: /^\/(help|\?|rules)$/, name: "/help", fn: cmd_help, help: "get help"}
     {cmd: "/commands", fn: cmd_commands, hidden: true, help: "get list of commands"}
     {cmd: /^(q|\/q(ueue)?|q\?)$/, name: "/queue", fn: cmd_queue, hidden: true, help: "get dj queue info"}
     {cmd: "q+", fn: cmd_queue_add, hidden: true, help: "add to dj queue"}
     {cmd: "/power", fn: cmd_power, help: "checks the power level of a user using the scouter"}
     {cmd: "/vips", fn: cmd_vips, help: "list vips"}
+    # {cmd: "/vuthers", fn: cmd_vuthers, help: "vuther clan roll call"}
+    
+    # Mod commands
+    {cmd: "/chinesefiredrill", fn: cmd_chinesefiredrill, owner: true, help: "boot everybody off stage. Must type THIS IS ONLY A DRILL :D"}
     {cmd: "/vip", fn: cmd_vip, owner: true, help: "make user a vip (no limit)"}
     {cmd: "/unvip", fn: cmd_unvip, owner: true, help: "remove vip status"}
     {cmd: "/setsongs", fn: cmd_setsongs, owner: true, help: "set song count"}
@@ -654,7 +659,6 @@ busDriver = (options) ->
     {cmd: "/unpermaban", fn: cmd_unpermaban, owner: true, help: "unban a user"}
     {cmd: "/night", fn: cmd_night, owner: true, help: "night mode"}
     {cmd: "/day", fn: cmd_day, mod: true, help: "day mode"}
-    {cmd: "/chinesefiredrill", fn: cmd_chinesefiredrill, owner: true, help: "boot everybody off stage. Must type THIS IS ONLY A DRILL :D"}
   ]
   
   busDriver.commands = commands

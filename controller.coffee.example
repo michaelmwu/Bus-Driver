@@ -1,14 +1,37 @@
 busdriver = require "./busdriver"
 
-userAuth = "auth+live+FILL IN AUTH TOKEN HERE"
-userId = "FILL IN USER ID HERE"
-roomId = "FILL IN ROOM ID HERE"
-ircServer = "irc.HOST.TDL"
-ircChan = "#THISISACHANIJUSTMADEUP"
-ircHandle = "BusDriver"
+args = process.argv.splice 2
 
-owenrs = [
-	"OWNER ID"
-]
+if args[0]
+  auth = require args[0]
+else
+  auth =
+    userAuth: "auth+live+FILL IN AUTH TOKEN HERE"
+    userId: "FILL IN USER ID HERE"
 
-driver = new busdriver.busDriver userAuth, userId, roomId, owners, ircServer, ircChan, ircHandle
+if args[1]
+  room = require args[1]
+else
+  room =
+    roomId: "FILL IN ROOM ID HERE"
+
+options =
+  userAuth: auth.userAuth
+  userId: auth.userId
+  roomId: room.roomId
+  ircServer: "irc.HOST.TDL"
+  ircChan: "#THISISACHANIJUSTMADEUP"
+  ircHandle: "Bus D"
+  
+  # User ids of bot controllers
+  owners: [
+    "OWNER ID 1"
+    "OWNER ID 2"
+  ]
+  
+  # Don't list these people as mods
+  excluded_mods: [
+    "EXCLUDED MOD ID"
+  ]
+
+driver = new busdriver.busDriver options
