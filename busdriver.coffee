@@ -169,6 +169,9 @@ busDriver = (options) ->
   
   update_name = (name, uid) ->
     roomUsernames[norm(name)] = uid
+    
+    if uid of roomUsers
+      roomUsers[uid].name = name
   
   update_idle = (uid) ->
     lastActivity[uid] = (new Date()).getTime()
@@ -278,6 +281,11 @@ busDriver = (options) ->
     for user in data.user
       # Double join won't spam
       roomUsersLeft[user.userid] = new Date()
+  
+  bot.on "update_user", (data) ->
+    # Track name changes
+    if data.name
+      update_name(data.userid, data.name)
   
   bot.on "deregistered", (data)->
     user = data.user[0]
@@ -426,6 +434,14 @@ busDriver = (options) ->
   cmd_dance = -> 
     bot.speak random_select(dances)
     bot.vote "up"
+
+  cmd_daps = (user) ->
+    name = user.name
+    
+    if name is "marinating minds"
+      name = "SAUCEY"
+    
+    bot.speak "DAPS #{name}"
   
   cmd_djs = (user, args, out) ->
     if _un.keys(djSongCount).length == 0
@@ -632,6 +648,7 @@ busDriver = (options) ->
     {cmd: "/last_song", fn: cmd_last_song, help: "votes for the last song"}
     {cmd: "/party", fn: cmd_party, help: "party!"}
     {cmd: "/dance", fn: cmd_dance, help: "dance!"}
+    {cmd: "/daps", fn: cmd_daps, help: "daps"}
     {cmd: "/djs", fn: cmd_djs, help: "dj song count"}
     {cmd: "/mods", fn: cmd_mods, help: "lists room mods"}
     {cmd: "/users", fn: cmd_users, help: "counts room users"}
@@ -690,20 +707,34 @@ busDriver = (options) ->
       util.puts "Debug mode OFF"
       debug_on = false
   
+  cmd_rename = (user, args, out) ->
+    args = args.trim()
+    
+    if args isnt ""
+      check = (data) ->
+        if data.success
+          out "Changed name to #{args}!"
+        else
+          out "Failed to change name: #{data.err}"
+      
+      bot.modifyName(args, check)
+    else
+      out "You have to give a name!"
+  
+  cmd_chat = (user, args) ->
+    bot.speak args.trim()
+  
+  cmd_whoami = (user, args, out) ->
+    if options.userId of roomUsers
+      out "Logged in as #{roomUsers[options.userId].name}"
+    else
+      out "Couldn't find myself"
+  
   cli_commands = [
-    {cmd: "/vip", fn: cmd_vip, help: "make user a vip (no limit)"}
-    {cmd: "/unvip", fn: cmd_unvip, help: "remove vip status"}
-    {cmd: "/setsongs", fn: cmd_setsongs, help: "set song count"}
-    {cmd: "/djs", fn: cmd_djs, help: "dj song count"}
-    {cmd: "/reset", fn: cmd_resetdj, help: "reset song count for djs"}
-    {cmd: "/escort", fn: cmd_escort, help: "escort a dj"}
-    {cmd: "/boot", fn: cmd_boot, help: "boot a user"}
-    {cmd: "/on", fn: cmd_on, help: "turn on dj limits"}
-    {cmd: "/off", fn: cmd_off, help: "turn off dj limits"}
-    {cmd: "/permaban", fn: cmd_permaban, help: "ban a user"}
-    {cmd: "/unpermaban", fn: cmd_unpermaban, help: "unban a user"}
-    {cmd: "/userid", fn: cmd_uid, help: "get user id"}
+    {cmd: "/chat", fn: cmd_chat, help: "make the bot say something"}
     {cmd: "/debug", fn: cmd_debug, help: "enable/disable debug"}
+    {cmd: "/name", fn: cmd_rename, help: "change bot name"}
+    {cmd: "/whoami", fn: cmd_whoami, help: "check who the bot is"}
   ]
 
   rl = readline.createInterface(process.stdin, process.stdout)
@@ -717,9 +748,12 @@ busDriver = (options) ->
       if typeof entry.cmd == "function" and entry.cmd.test(cmd_txt)
         return true
     
+    user = roomUsers[selfId]
+    
     if resolved_cmd = _un.find(commands, cmd_matches)
-      user = roomUsers[selfId]
-      resolved_cmd.fn(user, args)
+      resolved_cmd.fn(user, args, (txt) -> util.puts txt)
+    else if resolved_cmd = _un.find(cli_commands, cmd_matches)
+      resolved_cmd.fn(user, args, (txt) -> util.puts txt)
   
   rl.on "close", ->
     process.stdout.write '\n'
