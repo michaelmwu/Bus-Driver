@@ -83,6 +83,8 @@ busDriver = (options) ->
     else
       ''
   
+  now = -> new Date()
+  
   random_select = (list) ->
     list[Math.floor(Math.random()*list.length)]
   
@@ -237,7 +239,6 @@ busDriver = (options) ->
       active[user.userid] = true
       update_idle[user.userid]
 
-    now = new Date()
     user = data.user[0]
     
     if user.userid of permabanned
@@ -248,7 +249,7 @@ busDriver = (options) ->
         bot.speak "I can't boot you, #{user.name}, but you've been banned for #{permabanned[user.userid]}"
       
     # Only say hello to people that have left more than REJOIN_MESSAGE_WAIT_TIME ago    
-    if user.userid isnt selfId and (not roomUsersLeft[user.userid] or now.getTime() - roomUsersLeft[user.userid].getTime() > REJOIN_MESSAGE_WAIT_TIME)
+    if user.userid isnt selfId and (not roomUsersLeft[user.userid] or now().getTime() - roomUsersLeft[user.userid].getTime() > REJOIN_MESSAGE_WAIT_TIME)
       if greeting = get_greeting(user)
         delay = ()->
           bot.speak greeting
@@ -323,10 +324,8 @@ busDriver = (options) ->
           # Escort off stage
           bot.remDj(djId)
     
-    now = new Date()
-    
     # Resume song count if DJ rejoined too quickly
-    if djId of pastDjSongCount and now.getTime() - pastDjSongCount[djId].when.getTime() < DJ_REUP_TIME
+    if djId of pastDjSongCount and now().getTime() - pastDjSongCount[djId].when.getTime() < DJ_REUP_TIME
       djSongCount[djId] = pastDjSongCount[djId].count
     else
       djSongCount[djId] = 0
@@ -442,6 +441,26 @@ busDriver = (options) ->
       name = "SAUCEY"
     
     bot.speak "DAPS #{name}"
+  
+  djs_last = null
+  DJS_THROTTLE = 30 * 1000
+  
+  cmd_throttled_djs = (user, args, out) ->
+    if not djs_last or (new Date()).getTime() - djs_last.getTime() > DJS_THROTTLE
+      if _un.keys(djSongCount).length == 0
+        out "I don't have enough info yet for a song count"
+      else
+        txt = "Song Totals: "
+        djs_last = new Date()
+        bot.roomInfo (data) ->
+          newDjSongCount = {}
+          
+          for dj in data.room.metadata.djs
+            newDjSongCount[dj] = djSongCount[dj] or 0
+          
+          djSongCount = newDjSongCount
+          
+          out (txt + ("#{roomUsers[dj].name}: #{count}" for dj, count of djSongCount).join(", "))
   
   cmd_djs = (user, args, out) ->
     if _un.keys(djSongCount).length == 0
@@ -649,7 +668,7 @@ busDriver = (options) ->
     {cmd: "/party", fn: cmd_party, help: "party!"}
     {cmd: "/dance", fn: cmd_dance, help: "dance!"}
     {cmd: "/daps", fn: cmd_daps, help: "daps"}
-    {cmd: "/djs", fn: cmd_djs, help: "dj song count"}
+    {cmd: "/djs", fn: cmd_throttled_djs, help: "dj song count"}
     {cmd: "/mods", fn: cmd_mods, help: "lists room mods"}
     {cmd: "/users", fn: cmd_users, help: "counts room users"}
     {cmd: /^\/(timeout|waiting|waitlist)$/, name: "/timeout", fn: cmd_waiting, help: "dj timeout list"}
@@ -730,9 +749,16 @@ busDriver = (options) ->
     else
       out "Couldn't find myself"
   
+  chat_enabled = false
+  
+  cmd_togglechat = ->
+    chat_enabled = not chat_enabled
+  
   cli_commands = [
     {cmd: "/chat", fn: cmd_chat, help: "make the bot say something"}
+    {cmd: "/togglechat", fn: cmd_togglechat, help: "view chat"}
     {cmd: "/debug", fn: cmd_debug, help: "enable/disable debug"}
+    {cmd: "/djs", fn: cmd_djs, help: "dj song count"}
     {cmd: "/name", fn: cmd_rename, help: "change bot name"}
     {cmd: "/whoami", fn: cmd_whoami, help: "check who the bot is"}
   ]
@@ -750,9 +776,9 @@ busDriver = (options) ->
     
     user = roomUsers[selfId]
     
-    if resolved_cmd = _un.find(commands, cmd_matches)
+    if resolved_cmd = _un.find(cli_commands, cmd_matches)
       resolved_cmd.fn(user, args, (txt) -> util.puts txt)
-    else if resolved_cmd = _un.find(cli_commands, cmd_matches)
+    else if resolved_cmd = _un.find(commands, cmd_matches)
       resolved_cmd.fn(user, args, (txt) -> util.puts txt)
   
   rl.on "close", ->
@@ -775,8 +801,10 @@ busDriver = (options) ->
     
     if resolved_cmd and cmd_allowed(user, resolved_cmd)
       if cmd_logged(resolved_cmd)
-        now = new Date()
-        util.puts "MOD #{now.toTimeString()}: #{data.name}: #{data.text}"
+        util.puts "MOD #{now().toTimeString()}: #{data.name}: #{data.text}"
       resolved_cmd.fn(user, args, (txt) -> bot.speak(txt))
+    
+    if chat_enabled
+      util.puts "#{data.name}: #{data.text}"
   
 exports.busDriver = busDriver
