@@ -489,7 +489,7 @@ busDriver = (options) ->
       bot.speak "There are #{count} peeps rocking the Party Bus right now!"
   
   cmd_help = (user, args) ->
-    bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: http://bit.ly/partyrules"
+    bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: http://bit.ly/partybusrules"
   
   cmd_hidden = (cmd) ->
     cmd.hidden or cmd.owner or cmd.mod
@@ -662,6 +662,11 @@ busDriver = (options) ->
     night = false
     bot.speak "It's bumping in here! DJs wait #{DJ_WAIT_SONGS} songs"
   
+  cmd_stagedive = (user) ->
+    if user.userid of djSongCount
+      bot.remDj(user.userid)
+      bot.speak "#{user.name}, go crowd surfing!"
+  
   # TODO, match regexes, and have a hidden, so commands automatically lists
   commands = [
     {cmd: "/last_song", fn: cmd_last_song, help: "votes for the last song"}
@@ -677,6 +682,7 @@ busDriver = (options) ->
     {cmd: /^(q|\/q(ueue)?|q\?)$/, name: "/queue", fn: cmd_queue, hidden: true, help: "get dj queue info"}
     {cmd: "q+", fn: cmd_queue_add, hidden: true, help: "add to dj queue"}
     {cmd: "/power", fn: cmd_power, help: "checks the power level of a user using the scouter"}
+    {cmd: "/stagedive", fn: cmd_stagedive, help: "stage dive!"}
     {cmd: "/vips", fn: cmd_vips, help: "list vips"}
     # {cmd: "/vuthers", fn: cmd_vuthers, help: "vuther clan roll call"}
     
