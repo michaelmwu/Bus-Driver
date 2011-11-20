@@ -323,6 +323,7 @@ bartender = (userAuth, selfId, roomId) ->
         index = _un.indexOf(lc_all_drinks,lcDrink)
         if index < 0
           selection =  "I'm all out of that, how about something else?"
+          util.puts "Unknown drink #{args}"
         else
           selection = "One " + all_drinks[index] + ", coming right up!"
       else
@@ -370,6 +371,7 @@ bartender = (userAuth, selfId, roomId) ->
       selection = foods[lcFood]
     else
       selection = "We don't serve your kind here!"
+      util.puts "Unknown food #{args}"
     
     if typeof selection is "function"
       selection = selection(user)
@@ -393,9 +395,9 @@ bartender = (userAuth, selfId, roomId) ->
               "Hey I have a question about your hair, #{user.name}. When exactly did Brillo Pads start making toupees? BURRRNNNNNN!"
             ]
             
-            selection = random_select(  burns)
+            selection = random_select(burns)
         else
-          selection = "#{user.name} isn't in this room!"
+          selection = "#{name} isn't in this room!"
       else
         selection = "Who got pwned?"
     
