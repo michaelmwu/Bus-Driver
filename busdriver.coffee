@@ -101,6 +101,13 @@ busDriver = (options) ->
   is_owner = (userId) ->
     _un.include(options.owners, userId)
 
+  escort = (uid) ->
+    bot.remDj(uid)
+    
+    delay = -> bot.remDj(uid)
+    
+    setTimeout delay, 500
+  
   bot.on "update_votes", (data)->
     upVotes = data.room.metadata.upvotes
     downVotes = data.room.metadata.downvotes
@@ -141,7 +148,7 @@ busDriver = (options) ->
         
         if selfModerator and campingDjs[dj] >= DJ_MAX_PLUS_SONGS
           # Escort off stage
-          bot.remDj(dj)
+          escort(dj)
           escorted[dj] = true
       
       if lastDj and not (lastDj of escorted) and not (lastDj of vips) and djSongCount[lastDj] >= DJ_MAX_SONGS
@@ -326,7 +333,7 @@ busDriver = (options) ->
         
         if selfModerator
           # Escort off stage
-          bot.remDj(djId)
+          escort(djId)
     
     # Resume song count if DJ rejoined too quickly
     if djId of pastDjSongCount and now().getTime() - pastDjSongCount[djId].when.getTime() < DJ_REUP_TIME
