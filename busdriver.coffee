@@ -662,21 +662,20 @@ busDriver = (options) ->
     night = false
     bot.speak "It's bumping in here! DJs wait #{DJ_WAIT_SONGS} songs"
   
-  # TODO, match regexes, and have a hidden, so commands automatically lists
   commands = [
-    {cmd: "/last_song", fn: cmd_last_song, help: "votes for the last song"}
-    {cmd: "/party", fn: cmd_party, help: "party!"}
+    {cmd: "/commands", fn: cmd_commands, hidden: true, help: "get list of commands"}
     {cmd: "/dance", fn: cmd_dance, help: "dance!"}
     {cmd: "/daps", fn: cmd_daps, help: "daps"}
     {cmd: "/djs", fn: cmd_throttled_djs, help: "dj song count"}
+    {cmd: ["/help", "/rules", "/?"], name: "/help", fn: cmd_help, help: "get help"}
+    {cmd: ["/last", "/prev", "/last_song", "/prev_song"], fn: cmd_last_song, help: "votes for the last song"}
     {cmd: "/mods", fn: cmd_mods, help: "lists room mods"}
-    {cmd: "/users", fn: cmd_users, help: "counts room users"}
-    {cmd: /^\/(timeout|waiting|waitlist)$/, name: "/timeout", fn: cmd_waiting, help: "dj timeout list"}
-    {cmd: /^\/(help|\?|rules)$/, name: "/help", fn: cmd_help, help: "get help"}
-    {cmd: "/commands", fn: cmd_commands, hidden: true, help: "get list of commands"}
-    {cmd: /^(q|\/q(ueue)?|q\?)$/, name: "/queue", fn: cmd_queue, hidden: true, help: "get dj queue info"}
-    {cmd: "q+", fn: cmd_queue_add, hidden: true, help: "add to dj queue"}
+    {cmd: "/party", fn: cmd_party, help: "party!"}
     {cmd: "/power", fn: cmd_power, help: "checks the power level of a user using the scouter"}
+    {cmd: ["q", "/q", "/queue", "q?"], name: "/queue", fn: cmd_queue, hidden: true, help: "get dj queue info"}
+    {cmd: "q+", fn: cmd_queue_add, hidden: true, help: "add to dj queue"}
+    {cmd: ["/timeout", "/wait", "/waiting", "/waitlist"], name: "/timeout", fn: cmd_waiting, help: "dj timeout list"}
+    {cmd: "/users", fn: cmd_users, help: "counts room users"}
     {cmd: "/vips", fn: cmd_vips, help: "list vips"}
     # {cmd: "/vuthers", fn: cmd_vuthers, help: "vuther clan roll call"}
     
@@ -765,21 +764,30 @@ busDriver = (options) ->
 
   rl = readline.createInterface(process.stdin, process.stdout)
   
+  cmd_matches = (txt) ->
+    matches = (cmd) ->
+      if typeof cmd is "string"
+        if cmd is txt
+          true
+      else if "length" of cmd
+        _un.find(cmd, matches)
+      else if typeof cmd is "function" and cmd.test(txt)
+        true
+    
+    (entry) -> matches(entry.cmd)
+  
   rl.on "line", (line) ->
     [cmd_txt, args] = command(line)
-      
-    cmd_matches = (entry) ->
-      if typeof entry.cmd == "string" and entry.cmd is cmd_txt
-        return true
-      if typeof entry.cmd == "function" and entry.cmd.test(cmd_txt)
-        return true
-    
+
     user = roomUsers[selfId]
     
-    if resolved_cmd = _un.find(cli_commands, cmd_matches)
-      resolved_cmd.fn(user, args, (txt) -> util.puts txt)
-    else if resolved_cmd = _un.find(commands, cmd_matches)
-      resolved_cmd.fn(user, args, (txt) -> util.puts txt)
+    matcher = cmd_matches(cmd_txt)
+    out = (txt) -> util.puts txt
+    
+    if resolved_cmd = _un.find(cli_commands, matcher)
+      resolved_cmd.fn(user, args, out)
+    else if resolved_cmd = _un.find(commands, matcher)
+      resolved_cmd.fn(user, args, out)
   
   rl.on "close", ->
     process.stdout.write '\n'
@@ -790,14 +798,8 @@ busDriver = (options) ->
     update_idle(data.userid)
     [cmd_txt, args] = command(data.text)
     user = roomUsers[data.userid]
-      
-    cmd_matches = (entry) ->
-      if typeof entry.cmd == "string" and entry.cmd is cmd_txt
-        return true
-      if typeof entry.cmd == "function" and entry.cmd.test(cmd_txt)
-        return true
     
-    resolved_cmd = _un.find(commands, cmd_matches)
+    resolved_cmd = _un.find(commands, cmd_matches(cmd_txt))
     
     if resolved_cmd and cmd_allowed(user, resolved_cmd)
       if cmd_logged(resolved_cmd)
