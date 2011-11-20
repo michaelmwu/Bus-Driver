@@ -199,6 +199,10 @@ busDriver = (options) ->
         greeting = greeting(user)
       return greeting
   
+  heartbeat = ->
+  
+  setInterval heartbeat, 1000
+  
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize things
