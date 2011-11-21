@@ -466,12 +466,12 @@ busDriver = (options) ->
     else
       bot.speak "I'm powerless, do it yourself!"
   
-  cmd_vip = (user, args) ->
+  cmd_vip = (user, args, out) ->
     if vipUser = named_user(args)
       vips[vipUser.userid] = vipUser
-      bot.speak "Party all you want, #{vipUser.name}, because you're now a VIP!"
+      out "Party all you want, #{vipUser.name}, because you're now a VIP!"
     else
-      bot.speak "I couldn't find #{args} in the bus to make a VIP!"
+      out "I couldn't find #{args} in the bus to make a VIP!"
   
   cmd_unvip = (user, args) ->
     vipUser = named_user(args)
