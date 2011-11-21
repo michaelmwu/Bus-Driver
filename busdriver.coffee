@@ -37,8 +37,11 @@ busDriver = (options) ->
   # How much tolerance we have before we just escort
   DJ_MAX_PLUS_SONGS = 2
   
+  MINUTE = 60*1000
+  
   DJ_WAIT_SONGS = 3
   DJ_WAIT_SONGS_NIGHT = 1
+  DJ_WAIT_TIME = 15 * MINUTE
   
   night = false
   
@@ -52,9 +55,9 @@ busDriver = (options) ->
   MODERATE_DJ_MIN = 3
   
   # Time to hard escort DJs
-  DJ_AFK_ESCORT_TIMEOUT = 15 * 1000 * 60
+  DJ_AFK_ESCORT_TIMEOUT = 15 * MINUTE
   
-  DJ_AFK_WARN_TIMEOUT = 11 * 1000 * 60
+  DJ_AFK_WARN_TIMEOUT = 11 * MINUTE
   
   songName = ""
   upVotes = 0
@@ -775,6 +778,97 @@ busDriver = (options) ->
     else
       rules_link = DEFAULT_RULES
   
+  command = (line) ->
+    cmd_pat = /^([^\s]+?)(\s+([^\s]+.+?))?\s*$/
+    
+    cmd = ""
+    args = ""
+    
+    if match = cmd_pat.exec(line)
+      cmd = match[1].toLowerCase()
+      args = match[3] or ""
+    
+    [cmd, args]
+  
+  prop_rules = (args) ->  
+    if args is ""
+      bot.speak "Current rules link is #{rules_link}"
+    else
+      if args is "default"
+        rules_link = DEFAULT_RULES
+      else
+        rules_link = args.trim()
+  
+  prop_max_songs = (args) ->
+    if args is ""
+      bot.speak "Current DJ song limit is #{DJ_MAX_SONGS}"
+    else
+      songs = parseInt(args)
+      
+      if songs and songs > 0
+        DJ_MAX_SONGS = songs
+    
+  prop_wait_songs = (args) ->
+    if args is ""
+      bot.speak "Current DJ naughty corner time is #{DJ_WAIT_SONGS} songs"
+    else
+      songs = parseInt(args)
+      
+      if songs and songs > 0
+        DJ_WAIT_SONGS = songs
+    
+  prop_wait_time = (args) ->
+    if args is ""
+      mins = Math.floor(DJ_WAIT_TIME / MINUTE)
+      bot.speak "Current DJ wait time is #{mins} minutes"
+    else
+      mins = parseInt(args)
+      
+      if mins and mins > 0
+        DJ_WAIT_TIME = mins * MINUTE
+    
+  prop_wait_mode = (args) ->
+  prop_camp_songs = (args) ->
+    if args is ""
+      bot.speak "Current camping autoescort limit is #{DJ_MAX_PLUS_SONGS} songs"
+    else
+      songs = parseInt(args)
+      
+      if songs and songs > 0
+        DJ_MAX_PLUS_SONGS = songs
+  
+  prop_mode = (args) ->
+    args = args.toLowerCase().trim()
+    
+    if args is "vips" or args is "vip"
+      room_mode = VIP_MODE
+      bot.speak "It's a VIP party in here! VIPs (and mods) only on deck!"
+    else if args is "battle"
+      room_mode = BATTLE_MODE
+      bot.speak "Ready to BATTLE?!!!"
+    else if args is "normal"
+      room_mode = NORMAL_MODE
+      bot.speak "Back to the ho-hum. FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} wait time between sets"
+  
+  props =
+    "rules": prop_rules
+    "max_songs": prop_max_songs
+    "wait_songs": prop_wait_songs
+    "wait_time": prop_wait_time
+    "camp_songs": prop_camping
+    "wait_mode": prop_wait_mode
+    "mode": prop_mode
+  
+  cmd_set = (user, args) ->
+    [prop, prop_args] = command(args)
+    
+    if prop
+      prop = norm(prop)
+      prop_args = prop_args.trim()
+      
+      if prop of props
+        props[prop](prop_args)
+  
   # TODO, match regexes, and have a hidden, so commands automatically lists
   commands = [
     {cmd: "/commands", fn: cmd_commands, hidden: true, help: "get list of commands"}
@@ -782,7 +876,7 @@ busDriver = (options) ->
     {cmd: "/daps", fn: cmd_daps, help: "daps"}
     {cmd: "/djs", fn: cmd_throttled_djs, help: "dj song count"}
     {cmd: ["/help", "/rules", "/?"], name: "/help", fn: cmd_help, help: "get help"}
-    {cmd: ["/last", "/prev", "/last_song", "/prev_song"], fn: cmd_last_song, help: "votes for the last song"}
+    {cmd: ["/last", "/prev", "/last_song", "/prev_song"], name: "/last", fn: cmd_last_song, help: "votes for the last song"}
     {cmd: "/mods", fn: cmd_mods, help: "lists room mods"}
     {cmd: "/party", fn: cmd_party, help: "party!"}
     {cmd: "/power", fn: cmd_power, help: "checks the power level of a user using the scouter"}
@@ -797,6 +891,7 @@ busDriver = (options) ->
     # Mod commands
     {cmd: "/chinesefiredrill", fn: cmd_chinesefiredrill, owner: true, help: "boot everybody off stage. Must type THIS IS ONLY A DRILL :D"}
     {cmd: "/mode", fn: cmd_mode, owner: true, help: "change room mode: vips, battle, normal"}
+    {cmd: "/set", fn: cmd_set, owner: true, help: "set various variables"}
     {cmd: "/setrules", fn: cmd_setrules, owner: true, help: "set room rules text"}
     {cmd: "/vip", fn: cmd_vip, owner: true, help: "make user a vip (no limit)"}
     {cmd: "/unvip", fn: cmd_unvip, owner: true, help: "remove vip status"}
@@ -814,18 +909,6 @@ busDriver = (options) ->
   ]
   
   busDriver.commands = commands
-  
-  command = (line) ->
-    cmd_pat = /^([^\s]+?)(\s+([^\s]+.+?))?\s*$/
-    
-    cmd = ""
-    args = ""
-    
-    if match = cmd_pat.exec(line)
-      cmd = match[1].toLowerCase()
-      args = match[3] or ""
-    
-    [cmd, args]
   
   cmd_allowed = (user, cmd) ->
     is_owner(user.userid) or (not cmd.owner and (is_mod(user.userid) or not cmd.mod))
