@@ -1,6 +1,6 @@
 Bot = require 'ttapi'
 irc = require 'irc'
-_un = require 'underscore'
+_ = require 'underscore'
 util = require 'util'
 readline = require 'readline'
 
@@ -51,6 +51,11 @@ busDriver = (options) ->
   # Minimum number of DJs to activate reup modding
   MODERATE_DJ_MIN = 3
   
+  # Time to hard escort DJs
+  DJ_AFK_ESCORT_TIMEOUT = 15 * 1000 * 60
+  
+  DJ_AFK_WARN_TIMEOUT = 11 * 1000 * 60
+  
   songName = ""
   upVotes = 0
   downVotes = 0
@@ -67,13 +72,24 @@ busDriver = (options) ->
   campingDjs = {}
   mods = {}
   vips = {}
+  currentDj = undefined
   lastDj = undefined
+  warnedDjs = {}
   queueEnabled = false
   selfModerator = false
   busDriver.commands = []
   permabanned = {}
   enabled = true
   debug_on = false
+  
+  NORMAL_MODE = 0
+  VIP_MODE = 1
+  BATTLE_MODE = 2
+  
+  room_mode = NORMAL_MODE
+  
+  DEFAULT_RULES = "http://bit.ly/partybusrules"
+  rules_link = DEFAULT_RULES
   
   pastDjSongCount = {}
   
@@ -84,6 +100,12 @@ busDriver = (options) ->
       ''
   
   now = -> new Date()
+  
+  elapsed = (date) ->
+    if date
+      new Date().getTime() - date.getTime()
+    else
+      -1
   
   random_select = (list) ->
     list[Math.floor(Math.random()*list.length)]
@@ -99,7 +121,7 @@ busDriver = (options) ->
     userId of mods
   
   is_owner = (userId) ->
-    _un.include(options.owners, userId)
+    _.include(options.owners, userId)
 
   escort = (uid) ->
     bot.remDj(uid)
@@ -130,43 +152,45 @@ busDriver = (options) ->
     downVotes = data.room.metadata.downvotes
     
     songName = data.room.metadata.current_song.metadata.song
-    currentDjId = data.room.metadata.current_dj
-    currentDjName = roomUsers[currentDjId]
+    currentDj = data.room.metadata.current_dj
+    currentDjName = roomUsers[currentDj]
 
-    if data.room.metadata.current_dj in _un.keys djSongCount
-      djSongCount[currentDjId]++
+    if data.room.metadata.current_dj in _.keys djSongCount
+      djSongCount[currentDj]++
     else
-      djSongCount[currentDjId] = 1
+      djSongCount[currentDj] = 1
 
-    # Only mod if there are some minimum amount of DJs
-    if enabled and _un.keys(djSongCount).length >= MODERATE_DJ_MIN
-      escorted = {}
-      
-      # Escort DJs that haven't gotten off!
-      for dj in _un.keys(campingDjs)
-        campingDjs[dj]++
+    if room_mode is NORMAL_MODE
+      # Only mod if there are some minimum amount of DJs
+      if enabled and _.keys(djSongCount).length >= MODERATE_DJ_MIN
+        escorted = {}
         
-        if selfModerator and campingDjs[dj] >= DJ_MAX_PLUS_SONGS
-          # Escort off stage
-          escort(dj)
-          escorted[dj] = true
-      
-      if lastDj and not (lastDj of escorted) and not (lastDj of vips) and djSongCount[lastDj] >= DJ_MAX_SONGS
-        bot.speak "#{roomUsers[lastDj].name}, you've played #{djSongCount[lastDj]} songs already! Let somebody else get on the decks!"
+        # Escort DJs that haven't gotten off!
+        for dj in _.keys(campingDjs)
+          campingDjs[dj]++
+          
+          if selfModerator and campingDjs[dj] >= DJ_MAX_PLUS_SONGS
+            # Escort off stage
+            escort(dj)
+            escorted[dj] = true
         
-        if not (lastDj of campingDjs)
-          campingDjs[lastDj] = 0
-    
-    for dj in _un.keys(djWaitCount)
-      djWaitCount[dj]++
+        if lastDj and not (lastDj of escorted) and not (lastDj of vips) and djSongCount[lastDj] >= DJ_MAX_SONGS
+          bot.speak "#{roomUsers[lastDj].name}, you've played #{djSongCount[lastDj]} songs already! Let somebody else get on the decks!"
+          
+          if not (lastDj of campingDjs)
+            campingDjs[lastDj] = 0
       
-      # Remove from timeout list if the DJ has waited long enough
-      if djWaitCount[dj] >= wait_songs()
-        delete djWaitCount[dj]
-        delete pastDjSongCount[dj]
+      for dj in _.keys(djWaitCount)
+        djWaitCount[dj]++
+        
+        # Remove from timeout list if the DJ has waited long enough
+        if djWaitCount[dj] >= wait_songs()
+          delete djWaitCount[dj]
+          delete pastDjSongCount[dj]
+    # else if room_mode is BATTLE_MODE
     
     # Save DJ id
-    lastDj = currentDjId
+    lastDj = currentDj
   
   # Time to wait before considering a rejoining user to have actually come back
   REJOIN_MESSAGE_WAIT_TIME = 5000
@@ -183,7 +207,9 @@ busDriver = (options) ->
       roomUsers[uid].name = name
   
   update_idle = (uid) ->
-    lastActivity[uid] = (new Date()).getTime()
+    lastActivity[uid] = now()
+    if uid of warnedDjs
+      delete warnedDjs[uid]
   
   named_user = (name) ->
     name = norm(name)
@@ -207,19 +233,34 @@ busDriver = (options) ->
       return greeting
   
   heartbeat = ->
+    # Escort AFK DJs
+    for uid in _.keys(djSongCount)
+      if uid of lastActivity
+        idle = elapsed(lastActivity[uid])
+        
+        if idle > DJ_AFK_WARN_TIMEOUT and not (uid of warnedDjs)
+          bot.speak "#{roomUsers[uid].name}, no falling asleep on deck!"
+          warnedDjs[uid] = true
+        if idle > DJ_AFK_ESCORT_TIMEOUT
+          if uid isnt currentDj
+            escort(uid)
+      else
+        lastActivity[uid] = now()
   
   setInterval heartbeat, 1000
+  
+  register = (user) ->
+    update_name(user.name, user.userid)
+    roomUsers[user.userid] = user
+    active[user.userid] = true
+    update_idle(user.userid)
   
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize things
       bot.roomInfo (data) ->
         # Initialize users
-        for user in data.users
-          update_name(user.name, user.userid)
-          roomUsers[user.userid] = user
-          active[user.userid] = true
-          update_idle(user.userid)
+        _.map(data.users, register)
         
         # Initialize song
         if data.room.metadata.current_song
@@ -228,8 +269,8 @@ busDriver = (options) ->
           downVotes = data.room.metadata.downvotes
         
         # Initialize dj counts
-        for djId in data.room.metadata.djs
-          djSongCount[djId] = 0
+        for uid in data.room.metadata.djs
+          djSongCount[uid] = 0
         
         currentDj = data.room.metadata.current_dj
         
@@ -239,16 +280,12 @@ busDriver = (options) ->
           lastDj = roomUsers[currentDj]
         
         # Check if we are moderator
-        selfModerator = _un.any(data.room.metadata.moderator_id, (id) -> id is selfId)
+        selfModerator = _.any(data.room.metadata.moderator_id, (id) -> id is selfId)
         
         for modId in data.room.metadata.moderator_id
           mods[modId] = true
     
-    for user in data.user
-      update_name(user.name, user.userid)
-      roomUsers[user.userid] = user
-      active[user.userid] = true
-      update_idle[user.userid]
+    _.map(data.user, register)
 
     user = data.user[0]
     
@@ -280,7 +317,7 @@ busDriver = (options) ->
         joinedUsers[user.name] = user
         
         delay = ()->
-          users_text = (name for name in _un.keys(joinedUsers)).join(", ")
+          users_text = (name for name in _.keys(joinedUsers)).join(", ")
           
           bot.speak "Hello #{users_text}, welcome aboard the PARTY BUS!"
           
@@ -324,35 +361,45 @@ busDriver = (options) ->
 
   bot.on "add_dj", (data)->
     update_name(data.user[0].name, data.user[0].userid)
-    djId = data.user[0].userid
+    uid = data.user[0].userid
+    update_idle(uid)
     
-    if enabled and _un.keys(djSongCount).length >= MODERATE_DJ_MIN
-      if djId of djWaitCount and not (djId of vips) and djWaitCount[djId] <= wait_songs()
-        waitSongs = wait_songs() - djWaitCount[djId]
-        bot.speak "#{data.user[0].name}, party foul! Wait #{waitSongs} more song#{plural(waitSongs)} before getting on the decks again!"
-        
+    if room_mode is NORMAL_MODE
+      if enabled and _.keys(djSongCount).length >= MODERATE_DJ_MIN
+        if uid of djWaitCount and not (uid of vips) and djWaitCount[uid] <= wait_songs()
+          waitSongs = wait_songs() - djWaitCount[uid]
+          bot.speak "#{data.user[0].name}, party foul! Wait #{waitSongs} more song#{plural(waitSongs)} before getting on the decks again!"
+          
+          if selfModerator
+            # Escort off stage
+            escort(uid)
+    else if room_mode is VIP_MODE
+      if not (uid of vips or is_mod(uid) or is_owner(uid))
         if selfModerator
           # Escort off stage
-          escort(djId)
-    
+          escort(uid)
+        bot.speak "#{data.user[0].name}, it's VIPs only on deck right now!"
+#    else if room_mode is BATTLE_MODE
+      
     # Resume song count if DJ rejoined too quickly
-    if djId of pastDjSongCount and now().getTime() - pastDjSongCount[djId].when.getTime() < DJ_REUP_TIME
-      djSongCount[djId] = pastDjSongCount[djId].count
+    if uid of pastDjSongCount and now().getTime() - pastDjSongCount[uid].when.getTime() < DJ_REUP_TIME
+      djSongCount[uid] = pastDjSongCount[uid].count
     else
-      djSongCount[djId] = 0
+      djSongCount[uid] = 0
 
   bot.on "rem_dj", (data)->
-    djId = data.user[0].userid
+    uid = data.user[0].userid
     
     # Add to timeout list if DJ has played 
-    if enabled and djSongCount[djId] >= DJ_MAX_SONGS and not djWaitCount[djId]
+    if enabled and djSongCount[uid] >= DJ_MAX_SONGS and not djWaitCount[uid]
       # I believe the new song message is triggered first. Could ignore the message if it is too soon
-      djWaitCount[djId] = 0
+      djWaitCount[uid] = 0
       
     # TODO consider lineskipping
-    pastDjSongCount[djId] = { count: djSongCount[djId], when: new Date() }
-    delete djSongCount[djId]
-    delete campingDjs[djId]
+    pastDjSongCount[uid] = { count: djSongCount[uid], when: new Date() }
+    delete djSongCount[uid]
+    delete campingDjs[uid]
+    delete warnedDjs[uid]
   
   findDj = (name) ->
     uid = get_uid(name)
@@ -423,12 +470,23 @@ busDriver = (options) ->
     else
       bot.speak "#{args} is not a VIP in the Party Bus!"
   
-  cmd_vips = ->
-    if _un.keys(vips).length > 0
-      vip_list = (vipUser.name for vipId, vipUser of vips).join(", ")
-      bot.speak "Current VIPs in the Party Bus are #{vip_list}"
+  cmd_vips = (user, args) ->
+    args = norm(args)
+    if args is "all"
+      if _.keys(vips).length > 0
+        vip_list = (vipUser.name for vipId, vipUser of vips).join(", ")
+        bot.speak "All VIPs in the Party Bus: #{vip_list}"
+      else
+        bot.speak "There are no VIPs in the Party Bus right now"
     else
-      bot.speak "There are no VIPs in the Party Bus right now"
+      present_vips = _.filter(vips, (user) -> user.userid of active)
+      
+      if present_vips.length > 0
+        vip_list = (user.name for user in present_vips).join(", ")
+        bot.speak "Current VIPs in the Party Bus are #{vip_list}"
+      else
+        bot.speak "There are no VIPs in the Party Bus right now"
+      
   
   cmd_party = ->
     bot.speak "AWWWWWW YEAHHHHHHH!"
@@ -458,7 +516,7 @@ busDriver = (options) ->
   
   cmd_throttled_djs = (user, args, out) ->
     if not djs_last or (new Date()).getTime() - djs_last.getTime() > DJS_THROTTLE
-      if _un.keys(djSongCount).length == 0
+      if _.keys(djSongCount).length == 0
         out "I don't have enough info yet for a song count"
       else
         txt = "Song Totals: "
@@ -474,7 +532,7 @@ busDriver = (options) ->
           out (txt + ("#{roomUsers[dj].name}: #{count}" for dj, count of djSongCount).join(", "))
   
   cmd_djs = (user, args, out) ->
-    if _un.keys(djSongCount).length == 0
+    if _.keys(djSongCount).length == 0
       out "I don't have enough info yet for a song count"
     else
       txt = "Song Totals: "
@@ -496,35 +554,50 @@ busDriver = (options) ->
   
   cmd_users = ->
     bot.roomInfo (data) ->
-      count = _un.keys(data.users).length
+      count = _.keys(data.users).length
       bot.speak "There are #{count} peeps rocking the Party Bus right now!"
   
   cmd_help = (user, args) ->
-    bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: http://bit.ly/partybusrules"
+    if room_mode is VIP_MODE
+      bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: #{rules_link}. It's VIPs (and mods) only on deck right now!"
+    else if room_mode is BATTLE_MODE
+      bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: #{rules_link}! It's a King of the Hill battle right now!"
+    else if room_mode is NORMAL_MODE
+      bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: #{rules_link}"
   
   cmd_hidden = (cmd) ->
     cmd.hidden or cmd.owner or cmd.mod
   
   cmd_commands = ->
-    cmds = _un.select(busDriver.commands, (cmd) -> not cmd_hidden(cmd))
-    cmds_text = _un.map(cmds, (entry) -> entry.name or entry.cmd).join(", ")
+    cmds = _.select(busDriver.commands, (cmd) -> not cmd_hidden(cmd))
+    cmds_text = _.map(cmds, (entry) -> entry.name or entry.cmd).join(", ")
     
     bot.speak cmds_text
   
   cmd_waiting = ->
-    if _un.keys(djWaitCount).length == 0
+    if _.keys(djWaitCount).length == 0
       bot.speak "No DJs are in the naughty corner!"
     else
       waiting_list = ("#{roomUsers[dj].name}: #{wait_songs() - count}" for dj, count of djWaitCount).join(", ") + " songs"
       bot.speak "DJ naughty corner: #{waiting_list}"
   
   cmd_queue = (user, args) ->
-    if not queueEnabled
-      bot.speak "#{user.name}, the Party Bus has no queue! It's FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} song wait time"
+    if room_mode is VIP_MODE
+      bot.speak "#{user.name}, the Party Bus has no queue! It's VIPs (and mods) only on deck right now!"
+    else if room_mode is BATTLE_MODE
+      bot.speak "#{user.name}, the Party Bus has no queue! It's a King of the Hill battle right now!"
+    else if room_mode is NORMAL_MODE
+      if not queueEnabled
+        bot.speak "#{user.name}, the Party Bus has no queue! It's FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} song wait time"
   
   cmd_queue_add = (user, args) ->
-    if not queueEnabled
-      bot.speak "#{user.name}, the Party Bus has no queue! It's FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} song wait time"
+    if room_mode is VIP_MODE
+      bot.speak "#{user.name}, the Party Bus has no queue! It's VIPs (and mods) only on deck right now!"
+    else if room_mode is BATTLE_MODE
+      bot.speak "#{user.name}, the Party Bus has no queue! It's a King of the Hill battle right now!"
+    else if room_mode is NORMAL_MODE
+      if not queueEnabled
+        bot.speak "#{user.name}, the Party Bus has no queue! It's FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} song wait time"
   
   cmd_vuthers = ->
     bot.roomInfo (data) ->
@@ -539,8 +612,8 @@ busDriver = (options) ->
         else
           return vuther_pat.test(name)
       
-      vuthers = _un.select(data.users, (user) -> is_vutherbot(user.name))
-      vuthers = _un.map(vuthers, (user) -> user.name)
+      vuthers = _.select(data.users, (user) -> is_vutherbot(user.name))
+      vuthers = _.map(vuthers, (user) -> user.name)
       
       msg = "vuther force, assemble!"
       
@@ -613,6 +686,9 @@ busDriver = (options) ->
             bot.speak "I'm powerless to ban anyone, but #{roomUsers[user.userid].name} is on the list!"
                   
           permabanned[user.userid] = reason
+    else
+      bot.speak "#{user.name} you have to give a reason to ban someone!"
+      
   
   cmd_unpermaban = (user, args) ->
     name = args.toLowerCase()
@@ -630,8 +706,8 @@ busDriver = (options) ->
         bot.speak "CHINESE FIRE DRILL! In 3"
         
         callback = ->
-          for djId in data.room.metadata.djs
-            bot.remDj(djId)
+          for uid in data.room.metadata.djs
+            bot.remDj(uid)
           bot.bootUser(user.userid, "for pulling the fire alarm")
         
         it = (i) -> bot.speak(i)
@@ -650,7 +726,7 @@ busDriver = (options) ->
       
       if name isnt ""
         # Initialize users
-        if user = _un.find(data.users, (user) -> norm(user.name) is norm(args))
+        if user = _.find(data.users, (user) -> norm(user.name) is norm(args))
           power = Math.floor(user.points / 1000)
           if power > 0
             bot.speak "Vegeta, what does the scouter say about #{user.name}'s power level? It's over #{power}000!!!"
@@ -678,6 +754,27 @@ busDriver = (options) ->
       bot.remDj(user.userid)
       bot.speak "#{user.name}, go crowd surfing!"
   
+  cmd_mode = (user, args) ->
+    args = args.toLowerCase().trim()
+    
+    if args is "vips" or args is "vip"
+      room_mode = VIP_MODE
+      bot.speak "It's a VIP party in here! VIPs (and mods) only on deck!"
+    else if args is "battle"
+      room_mode = BATTLE_MODE
+      bot.speak "Ready to BATTLE?!!!"
+    else if args is "normal"
+      room_mode = NORMAL_MODE
+      bot.speak "Back to the ho-hum. FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} wait time between sets"
+  
+  cmd_setrules = (user, args) ->
+    args = args.trim()
+    
+    if args isnt ""
+      rules_link = args.trim()
+    else
+      rules_link = DEFAULT_RULES
+  
   # TODO, match regexes, and have a hidden, so commands automatically lists
   commands = [
     {cmd: "/commands", fn: cmd_commands, hidden: true, help: "get list of commands"}
@@ -694,11 +791,13 @@ busDriver = (options) ->
     {cmd: ["/timeout", "/wait", "/waiting", "/waitlist"], name: "/timeout", fn: cmd_waiting, help: "dj timeout list"}
     {cmd: "/users", fn: cmd_users, help: "counts room users"}
     {cmd: "/stagedive", fn: cmd_stagedive, help: "stage dive!"}
-    {cmd: "/vips", fn: cmd_vips, help: "list vips"}
+    {cmd: "/vips", fn: cmd_vips, help: "list vips in the bus"}
     # {cmd: "/vuthers", fn: cmd_vuthers, help: "vuther clan roll call"}
     
     # Mod commands
     {cmd: "/chinesefiredrill", fn: cmd_chinesefiredrill, owner: true, help: "boot everybody off stage. Must type THIS IS ONLY A DRILL :D"}
+    {cmd: "/mode", fn: cmd_mode, owner: true, help: "change room mode: vips, battle, normal"}
+    {cmd: "/setrules", fn: cmd_setrules, owner: true, help: "set room rules text"}
     {cmd: "/vip", fn: cmd_vip, owner: true, help: "make user a vip (no limit)"}
     {cmd: "/unvip", fn: cmd_unvip, owner: true, help: "remove vip status"}
     {cmd: "/setsongs", fn: cmd_setsongs, owner: true, help: "set song count"}
@@ -788,7 +887,7 @@ busDriver = (options) ->
         if cmd is txt
           true
       else if "length" of cmd
-        _un.find(cmd, matches)
+        _.find(cmd, matches)
       else if typeof cmd is "function" and cmd.test(txt)
         true
     
@@ -802,9 +901,9 @@ busDriver = (options) ->
     matcher = cmd_matches(cmd_txt)
     out = (txt) -> util.puts txt
     
-    if resolved_cmd = _un.find(cli_commands, matcher)
+    if resolved_cmd = _.find(cli_commands, matcher)
       resolved_cmd.fn(user, args, out)
-    else if resolved_cmd = _un.find(commands, matcher)
+    else if resolved_cmd = _.find(commands, matcher)
       resolved_cmd.fn(user, args, out)
   
   rl.on "close", ->
@@ -817,7 +916,7 @@ busDriver = (options) ->
     [cmd_txt, args] = command(data.text)
     user = roomUsers[data.userid]
     
-    resolved_cmd = _un.find(commands, cmd_matches(cmd_txt))
+    resolved_cmd = _.find(commands, cmd_matches(cmd_txt))
     
     if resolved_cmd and cmd_allowed(user, resolved_cmd)
       if cmd_logged(resolved_cmd)
