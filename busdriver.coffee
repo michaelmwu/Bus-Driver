@@ -85,6 +85,8 @@ busDriver = (options) ->
   enabled = true
   debug_on = false
   
+  lamers = {}
+  
   NORMAL_MODE = 0
   VIP_MODE = 1
   BATTLE_MODE = 2
@@ -142,8 +144,13 @@ busDriver = (options) ->
         songName = data.room.metadata.current_song.metadata.song
     
     # This might work... not sure what the votelog is
-    for [userId, vote] in data.room.metadata.votelog
-      update_idle(userId)
+    for [uid, vote] in data.room.metadata.votelog
+      update_idle(uid)
+      
+      if vote is "down"
+        lamers[uid] = true
+      else
+        delete lamers[uid]
 
   bot.on "newsong", (data)->
     if songName isnt ""
@@ -153,6 +160,8 @@ busDriver = (options) ->
     # Reset vote count
     upVotes = data.room.metadata.upvotes
     downVotes = data.room.metadata.downvotes
+    
+    lamers = []
     
     songName = data.room.metadata.current_song.metadata.song
     currentDj = data.room.metadata.current_dj
@@ -790,6 +799,13 @@ busDriver = (options) ->
     
     [cmd, args]
   
+  cmd_lamers = ->
+    if _.keys(lamers).length > 0
+      lamer_list = (roomUsers[uid].name for uid in _.keys(lamers)).join(", ")
+      bot.speak "#{lamer_list}, killing the mood, man..."
+    else
+      bot.speak "All party all the time! We're rocking it!"
+  
   prop_rules = (args) ->  
     if args is ""
       bot.speak "Current rules link is #{rules_link}"
@@ -877,6 +893,7 @@ busDriver = (options) ->
     {cmd: "/djs", fn: cmd_throttled_djs, help: "dj song count"}
     {cmd: ["/help", "/rules", "/?"], name: "/help", fn: cmd_help, help: "get help"}
     {cmd: ["/last", "/prev", "/last_song", "/prev_song"], name: "/last", fn: cmd_last_song, help: "votes for the last song"}
+    {cmd: "/lamers", fn: cmd_lamers, help: "who is that lamer"}
     {cmd: "/mods", fn: cmd_mods, help: "lists room mods"}
     {cmd: "/party", fn: cmd_party, help: "party!"}
     {cmd: "/power", fn: cmd_power, help: "checks the power level of a user using the scouter"}
