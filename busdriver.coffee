@@ -73,6 +73,7 @@ busDriver = (options) ->
   JOINED_DELAY = 15000
   djSongCount = {}
   campingDjs = {}
+  lamers = {}
   mods = {}
   vips = {}
   currentDj = undefined
@@ -84,8 +85,6 @@ busDriver = (options) ->
   permabanned = {}
   enabled = true
   debug_on = false
-  
-  lamers = {}
   
   NORMAL_MODE = 0
   VIP_MODE = 1
@@ -119,6 +118,29 @@ busDriver = (options) ->
     if debug_on
       util.puts txt
   
+  process_votelog = (votelog) ->
+    # This might work... not sure what the votelog is
+    for [uid, vote] in votelog
+      if uid isnt ""
+        update_idle(uid)
+        
+        if vote is "down"
+          lamers[uid] = true
+        else
+          delete lamers[uid]
+  
+  roomInfo = (callback) ->
+    bot.roomInfo (data) ->
+      # Initialize song
+      if data.room.metadata.current_song
+        songName = data.room.metadata.current_song.metadata.song
+        upVotes = data.room.metadata.upvotes
+        downVotes = data.room.metadata.downvotes
+    
+      process_votelog data.room.metadata.votelog
+      
+      callback data
+  
   # Count songs DJs have waited for
   djWaitCount = {}
   
@@ -140,17 +162,11 @@ busDriver = (options) ->
     downVotes = data.room.metadata.downvotes
 
     if songName is ""
-      bot.roomInfo (data)->
+      roomInfo (data)->
         songName = data.room.metadata.current_song.metadata.song
     
     # This might work... not sure what the votelog is
-    for [uid, vote] in data.room.metadata.votelog
-      update_idle(uid)
-      
-      if vote is "down"
-        lamers[uid] = true
-      else
-        delete lamers[uid]
+    process_votelog data.room.metadata.votelog
 
   bot.on "newsong", (data)->
     if songName isnt ""
@@ -270,15 +286,9 @@ busDriver = (options) ->
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize things
-      bot.roomInfo (data) ->
+      roomInfo (data) ->
         # Initialize users
         _.map(data.users, register)
-        
-        # Initialize song
-        if data.room.metadata.current_song
-          songName = data.room.metadata.current_song.metadata.song
-          upVotes = data.room.metadata.upvotes
-          downVotes = data.room.metadata.downvotes
         
         # Initialize dj counts
         for uid in data.room.metadata.djs
@@ -446,14 +456,13 @@ busDriver = (options) ->
         name = match[1]
         reason = match[2]
         
-        bot.roomInfo (data) ->
-          if uid = get_uid(name)
-            if uid is options.userId
-              bot.speak "I'm not booting myself!"
-            else
-              bot.bootUser(uid, reason)
+        if uid = get_uid(name)
+          if uid is options.userId
+            bot.speak "I'm not booting myself!"
           else
-            bot.speak "I couldn't find #{name} to boot!"
+            bot.bootUser(uid, reason)
+        else
+          bot.speak "I couldn't find #{name} to boot!"
       else
         bot.speak "#{user.name} you have to give a reason to boot!"
     else
@@ -533,7 +542,7 @@ busDriver = (options) ->
       else
         txt = "Song Totals: "
         djs_last = new Date()
-        bot.roomInfo (data) ->
+        roomInfo (data) ->
           newDjSongCount = {}
           
           for dj in data.room.metadata.djs
@@ -548,7 +557,7 @@ busDriver = (options) ->
       out "I don't have enough info yet for a song count"
     else
       txt = "Song Totals: "
-      bot.roomInfo (data) ->
+      roomInfo (data) ->
         newDjSongCount = {}
         
         for dj in data.room.metadata.djs
@@ -559,13 +568,13 @@ busDriver = (options) ->
         out (txt + ("#{roomUsers[dj].name}: #{count}" for dj, count of djSongCount).join(", "))
 
   cmd_mods = ->
-    bot.roomInfo (data) ->
+    roomInfo (data) ->
       # Collect mods
       mod_list = (roomUsers[modId].name for modId in data.room.metadata.moderator_id when active[modId] and modId isnt selfId and not (modId in options.excluded_mods)).join(", ")
       bot.speak "Current mods in the Party Bus are #{mod_list}"
   
   cmd_users = ->
-    bot.roomInfo (data) ->
+    roomInfo (data) ->
       count = _.keys(data.users).length
       bot.speak "There are #{count} peeps rocking the Party Bus right now!"
   
@@ -612,7 +621,7 @@ busDriver = (options) ->
         bot.speak "#{user.name}, the Party Bus has no queue! It's FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} song wait time"
   
   cmd_vuthers = ->
-    bot.roomInfo (data) ->
+    roomInfo (data) ->
       vuther_pat = /\bv[aeiou]+\w*th[aeiou]\w*r/i
       
       daddy = false
@@ -713,7 +722,7 @@ busDriver = (options) ->
       bot.speak "Unbanning #{roomUsers[user.userid].name}"
   
   cmd_chinesefiredrill = (user, args) ->
-    bot.roomInfo (data) ->
+    roomInfo (data) ->
       if selfModerator and args is "THIS IS ONLY A DRILL"
         bot.speak "CHINESE FIRE DRILL! In 3"
         
@@ -733,7 +742,7 @@ busDriver = (options) ->
         
   
   cmd_power = (user, args) ->
-    bot.roomInfo (data) ->
+    roomInfo (data) ->
       name = norm(args)
       
       if name isnt ""
@@ -800,11 +809,19 @@ busDriver = (options) ->
     [cmd, args]
   
   cmd_lamers = ->
-    if _.keys(lamers).length > 0
-      lamer_list = (roomUsers[uid].name for uid in _.keys(lamers)).join(", ")
-      bot.speak "#{lamer_list}, killing the mood, man..."
-    else
-      bot.speak "All party all the time! We're rocking it!"
+    roomInfo (data) ->
+      # Processes the votelog automatically
+      count = _.keys(lamers).length
+      
+      if count > 0
+        lamer_list = (roomUsers[uid].name for uid in _.keys(lamers)).join(", ")
+        bot.speak "#{lamer_list}, killing the mood, man..."
+      else if downVotes > 0
+        bot.speak "There's a lamer here, but I can't figure out who"
+      else
+        bot.speak "All party all the time! We're rocking it!"
+  
+  prop_camping = (args) ->
   
   prop_rules = (args) ->  
     if args is ""
