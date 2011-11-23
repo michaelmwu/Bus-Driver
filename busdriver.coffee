@@ -197,7 +197,7 @@ busDriver = (options) ->
         for dj in _.keys(campingDjs)
           campingDjs[dj]++
           
-          if selfModerator and campingDjs[dj] >= DJ_MAX_PLUS_SONGS
+          if not (dj of vips) and selfModerator and campingDjs[dj] >= DJ_MAX_PLUS_SONGS
             # Escort off stage
             escort(dj)
             escorted[dj] = true
@@ -491,22 +491,22 @@ busDriver = (options) ->
     else
       bot.speak "#{args} is not a VIP in the Party Bus!"
   
-  cmd_vips = (user, args) ->
+  cmd_vips = (user, args, out) ->
     args = norm(args)
     if args is "all"
       if _.keys(vips).length > 0
         vip_list = (vipUser.name for vipId, vipUser of vips).join(", ")
-        bot.speak "All VIPs in the Party Bus: #{vip_list}"
+        out "All VIPs in the Party Bus: #{vip_list}"
       else
-        bot.speak "There are no VIPs in the Party Bus right now"
+        out "There are no VIPs in the Party Bus right now"
     else
       present_vips = _.filter(vips, (user) -> user.userid of active)
       
       if present_vips.length > 0
         vip_list = (user.name for user in present_vips).join(", ")
-        bot.speak "Current VIPs in the Party Bus are #{vip_list}"
+        out "Current VIPs in the Party Bus are #{vip_list}"
       else
-        bot.speak "There are no VIPs in the Party Bus right now"
+        out "There are no VIPs in the Party Bus right now"
       
   
   cmd_party = ->
