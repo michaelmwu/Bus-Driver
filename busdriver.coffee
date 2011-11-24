@@ -244,6 +244,9 @@ busDriver = (options) ->
     if name of roomUsernames
       roomUsers[roomUsernames[name]]
   
+  is_uid = (uid) ->
+    uid and uid.length == 24
+  
   get_uid = (name) ->
     roomUsernames[norm(name)]
   
@@ -693,23 +696,28 @@ busDriver = (options) ->
     boot_pat = /^\s*(.*?)\s*:\s*([^\s].+?)\s*$/
     
     if match = boot_pat.exec(args)
+      uid = undefined
       name = match[1]
       reason = match[2]
     
-      if user = named_user(name)
-        if user.userid is options.userId
+      if is_uid(name)
+        uid = name
+      else if user = named_user(name)
+        uid = user.userid
+        
+      if uid
+        if uid is options.userId
           bot.speak "I'm not booting myself!"
         else
           if selfModerator
-            bot.bootUser(user.userid, reason)
-            bot.speak "Banning #{roomUsers[user.userid].name}"
+            bot.bootUser(uid, reason)
+            bot.speak "Banning #{name}"
           else
-            bot.speak "I'm powerless to ban anyone, but #{roomUsers[user.userid].name} is on the list!"
+            bot.speak "I'm powerless to ban anyone, but #{name} is on the list!"
                   
-          permabanned[user.userid] = reason
+          permabanned[uid] = reason
     else
       bot.speak "#{user.name} you have to give a reason to ban someone!"
-      
   
   cmd_unpermaban = (user, args) ->
     name = args.toLowerCase()
