@@ -4,6 +4,14 @@ _ = require 'underscore'
 util = require 'util'
 readline = require 'readline'
 
+Db = require('mongodb').Db
+Connection = require('mongodb').Connection
+Server = require('mongodb').Server
+
+db = new Db 'TheBusDriver', new Server '127.0.0.1', 27017, {}
+db.open (err, _db)->
+  db = _db
+
 greet = require './greetings'
 
 busDriver = (options) ->
@@ -258,6 +266,15 @@ busDriver = (options) ->
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize things
+
+      db.collection 'vips', (err, col)->
+        criteria = 
+          unvipedAt: false
+        col.find criteria, (err, cursor)->
+          cursor.each (err,doc)->
+            if doc isnt null
+              vips[doc.vipUserInfo.userid] = doc.vipUserInfo
+
       bot.roomInfo (data) ->
         # Initialize users
         _.map(data.users, register)
@@ -456,8 +473,18 @@ busDriver = (options) ->
   
   cmd_vip = (user, args) ->
     if vipUser = named_user(args)
-      vips[vipUser.userid] = vipUser
-      bot.speak "Party all you want, #{vipUser.name}, because you're now a VIP!"
+      if vipUser.userid not in _.keys vips
+        vips[vipUser.userid] = vipUser
+        bot.speak "Party all you want, #{vipUser.name}, because you're now a VIP!"
+
+        db.collection 'vips', (err, col)->
+          col.insert 
+            vipUserInfo: vipUser
+            vipedBy: user
+            vipedAt: new Date()
+            unvipedAt: false
+      else
+        bot.speak "#{vipUser.name} is already a VIP on the Party Bus!"
     else
       bot.speak "I couldn't find #{args} in the bus to make a VIP!"
   
@@ -467,6 +494,17 @@ busDriver = (options) ->
     if vipUser.userid of vips
       bot.speak "#{vipUser.name} is no longer special"
       delete vips[vipUser.userid]
+
+      db.collection 'vips', (err, col)->
+        criteria = 
+          'vipUserInfo.userid': vipUser.userid
+          unvipedAt: false
+        modifications = 
+          '$set':
+            unvipedAt: new Date()
+            unvipedBy: user
+        col.update criteria, modifications, true
+
     else
       bot.speak "#{args} is not a VIP in the Party Bus!"
   
@@ -925,5 +963,8 @@ busDriver = (options) ->
     
     if chat_enabled
       util.puts "#{data.name}: #{data.text}"
+
+    db.collection 'chat', (err,col)->
+      col.insert data
   
 exports.busDriver = busDriver
