@@ -4,6 +4,14 @@ _ = require 'underscore'
 util = require 'util'
 readline = require 'readline'
 
+Db = require('mongodb').Db
+Connection = require('mongodb').Connection
+Server = require('mongodb').Server
+
+db = new Db 'TheBusDriver', new Server '127.0.0.1', 27017, {}
+db.open (err, _db)->
+  db = _db
+
 greet = require './greetings'
 
 busDriver = (options) ->
@@ -197,15 +205,15 @@ busDriver = (options) ->
         for dj in _.keys(campingDjs)
           campingDjs[dj]++
           
-          if not (dj of vips) and selfModerator and campingDjs[dj] >= DJ_MAX_PLUS_SONGS
+          if dj not of vips and selfModerator and campingDjs[dj] >= DJ_MAX_PLUS_SONGS
             # Escort off stage
             escort(dj)
             escorted[dj] = true
         
-        if lastDj and not (lastDj of escorted) and not (lastDj of vips) and djSongCount[lastDj] >= DJ_MAX_SONGS
+        if lastDj and lastDj not of escorted and lastDj not of vips and djSongCount[lastDj] >= DJ_MAX_SONGS
           bot.speak "#{roomUsers[lastDj].name}, you've played #{djSongCount[lastDj]} songs already! Let somebody else get on the decks!"
           
-          if not (lastDj of campingDjs)
+          if lastDj not of campingDjs
             campingDjs[lastDj] = 0
       
       for dj in _.keys(djWaitCount)
@@ -269,7 +277,7 @@ busDriver = (options) ->
       if uid of lastActivity
         idle = elapsed(lastActivity[uid])
         
-        if idle > DJ_AFK_WARN_TIMEOUT and not (uid of warnedDjs)
+        if idle > DJ_AFK_WARN_TIMEOUT and uid not of warnedDjs
           bot.speak "#{roomUsers[uid].name}, no falling asleep on deck!"
           warnedDjs[uid] = true
         if idle > DJ_AFK_ESCORT_TIMEOUT
@@ -289,6 +297,14 @@ busDriver = (options) ->
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize things
+      db.collection 'vips', (err, col)->
+        criteria = 
+          unvipedAt: false
+        col.find criteria, (err, cursor)->
+          cursor.each (err,doc)->
+            if doc isnt null
+              vips[doc.vipUserInfo.userid] = doc.vipUserInfo
+
       roomInfo (data) ->
         # Initialize users
         _.map(data.users, register)
@@ -391,7 +407,7 @@ busDriver = (options) ->
     
     if room_mode is NORMAL_MODE
       if enabled and _.keys(djSongCount).length >= MODERATE_DJ_MIN
-        if uid of djWaitCount and not (uid of vips) and djWaitCount[uid] <= wait_songs()
+        if uid of djWaitCount and uid not of vips and djWaitCount[uid] <= wait_songs()
           waitSongs = wait_songs() - djWaitCount[uid]
           bot.speak "#{data.user[0].name}, party foul! Wait #{waitSongs} more song#{plural(waitSongs)} before getting on the decks again!"
           
@@ -480,8 +496,18 @@ busDriver = (options) ->
   
   cmd_vip = (user, args, out) ->
     if vipUser = named_user(args)
-      vips[vipUser.userid] = vipUser
-      out "Party all you want, #{vipUser.name}, because you're now a VIP!"
+      if vipUser.userid not of vips
+        vips[vipUser.userid] = vipUser
+        bot.speak "Party all you want, #{vipUser.name}, because you're now a VIP!"
+
+        db.collection 'vips', (err, col)->
+          col.insert 
+            vipUserInfo: vipUser
+            vipedBy: user
+            vipedAt: new Date()
+            unvipedAt: false
+      else
+        bot.speak "#{vipUser.name} is already a VIP on the Party Bus!"
     else
       out "I couldn't find #{args} in the bus to make a VIP!"
   
@@ -491,6 +517,17 @@ busDriver = (options) ->
     if vipUser.userid of vips
       bot.speak "#{vipUser.name} is no longer special"
       delete vips[vipUser.userid]
+
+      db.collection 'vips', (err, col)->
+        criteria = 
+          'vipUserInfo.userid': vipUser.userid
+          unvipedAt: false
+        modifications = 
+          '$set':
+            unvipedAt: new Date()
+            unvipedBy: user
+        col.update criteria, modifications, true
+
     else
       bot.speak "#{args} is not a VIP in the Party Bus!"
   
@@ -573,7 +610,7 @@ busDriver = (options) ->
   cmd_mods = ->
     roomInfo (data) ->
       # Collect mods
-      mod_list = (roomUsers[modId].name for modId in data.room.metadata.moderator_id when active[modId] and modId isnt selfId and not (modId in options.excluded_mods)).join(", ")
+      mod_list = (roomUsers[modId].name for modId in data.room.metadata.moderator_id when active[modId] and modId isnt selfId and modId not in options.excluded_mods).join(", ")
       bot.speak "Current mods in the Party Bus are #{mod_list}"
   
   cmd_users = ->
@@ -665,7 +702,7 @@ busDriver = (options) ->
         djSongCount[dj] = count
         
         # Set camping if over
-        if count >= DJ_MAX_SONGS and not (dj of campingDjs)
+        if count >= DJ_MAX_SONGS and dj not of campingDjs
           campingDjs[dj] = 0
         
         # Remove camping if under
@@ -1050,5 +1087,8 @@ busDriver = (options) ->
     
     if chat_enabled
       util.puts "#{data.name}: #{data.text}"
+
+    db.collection 'chat', (err,col)->
+      col.insert data
   
 exports.busDriver = busDriver
