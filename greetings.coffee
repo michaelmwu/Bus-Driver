@@ -12,5 +12,8 @@ exports.greetings =
   "IT'S OVER 9000!!!!": "Vegeta, what does the scouter say about his power level? It's OVER 9000!!!!"
   "Jellytime": "It's peanut butter JELLYTIME!"
   "4de56d41e8a6c47401000d74": (user) -> "Hey, I think #{user.name} is AFK!" # Nick the K
+  "4df672394fe7d04a1901cbeb": (user) -> "#{user.name} is here and he brought Chipotle!"
+  "4e827db5a3f7511650115ee1": "Konnichiwa, Stacy-san! :)"
+  "4e19470fa3f75133a90951cc": (user) -> "yo #{user.name} can I get your number?"
   "sex": "Who wants sex?"
   "vuther": "Hey, papa vuther is here on the PARTY BUS!"

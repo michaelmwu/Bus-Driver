@@ -485,11 +485,12 @@ busDriver = (options) ->
   cmd_unvip = (user, args) ->
     vipUser = named_user(args)
     
-    if vipUser.userid of vips
-      bot.speak "#{vipUser.name} is no longer special"
-      delete vips[vipUser.userid]
-    else
-      bot.speak "#{args} is not a VIP in the Party Bus!"
+    if vipUser
+      if vipUser.userid of vips
+        bot.speak "#{vipUser.name} is no longer special"
+        delete vips[vipUser.userid]
+      else
+        bot.speak "#{args} is not a VIP in the Party Bus!"
   
   cmd_vips = (user, args, out) ->
     args = norm(args)
