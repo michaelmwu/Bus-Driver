@@ -360,7 +360,6 @@ bartender = (userAuth, selfId, roomId) ->
     uid = user.userid
     if uid not in _.keys tabs
       tabs[uid] = -7
-      bot.speak "Creating new tab for #{user.name}"
       db.collection 'tabs', (err,col) ->
         col.insert
           tabUserInfo: user
@@ -368,7 +367,6 @@ bartender = (userAuth, selfId, roomId) ->
           removed: false
     else
       tabs[uid] = tabs[uid] - 7
-      bot.speak "Current tab is at $"+tabs[uid]
       db.collection 'tabs', (err,col) ->
         criteria = 
           'tabUserInfo.userid': uid
@@ -377,7 +375,7 @@ bartender = (userAuth, selfId, roomId) ->
           '$set':
             owed: tabs[uid]
         col.update criteria, modification, false
-    
+      
     msgs = [
       "This party is bumping! Drinks all around!"
       "Hey #{user.name}, here's a little something to get you rocking!"
@@ -429,6 +427,7 @@ bartender = (userAuth, selfId, roomId) ->
     
   cmd_tab = (user,args) ->
     uid = user.userid
+    bot.speak "Looking up your tab..."
     if uid not in _.keys tabs
       bot.speak "#{user.name} has yet to order anything!"
     else
