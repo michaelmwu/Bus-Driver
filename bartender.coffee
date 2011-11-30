@@ -360,6 +360,7 @@ bartender = (userAuth, selfId, roomId) ->
     uid = "#{user.userid}"
     if uid not in tabs
       tabs[uid] = -7
+      bot.speak "Creating new tab for #{user.name}"
       db.collection 'tabs', (err,col) ->
         col.insert
           tabUserInfo: user
