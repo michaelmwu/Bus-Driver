@@ -1,14 +1,16 @@
 Bot = require 'ttapi'
-_un = require 'underscore'
+irc = require 'irc'
+_ = require 'underscore'
 util = require 'util'
 r = require 'mersenne'
+readline = require 'readline'
 
-  Db = require('mongodb').Db
-	Connection = require('mongodb').Connection
-	Server = require('mongodb').Server
-		
-	db = new Db 'BusBartender', new Server '127.0.0.1', 27017, {}
-	db.open (err, _db)->
+Db = require('mongodb').Db
+Connection = require('mongodb').Connection
+Server = require('mongodb').Server
+  
+db = new Db 'BusBartender', new Server '127.0.0.1', 27017, {}
+db.open (err, _db)->
 	db = _db
 
 
@@ -189,8 +191,8 @@ bartender = (userAuth, selfId, roomId) ->
     drinks_vodkas
     drinks_wines
   ]
-  all_drinks = _un.flatten(all_drinks)
-  lc_all_drinks = _un.map(all_drinks, (str)-> str.toLowerCase())
+  all_drinks = _.flatten(all_drinks)
+  lc_all_drinks = _.map(all_drinks, (str)-> str.toLowerCase())
   
   n_beers = drinks_beers.length
   beers_on_tap = ->
@@ -405,7 +407,7 @@ bartender = (userAuth, selfId, roomId) ->
         selection = random_select(selection)
     else
       if lcDrink and lcDrink isnt ""
-        index = _un.indexOf(lc_all_drinks,lcDrink)
+        index = _.indexOf(lc_all_drinks,lcDrink)
         if index < 0
           selection =  "I'm all out of that, how about something else?"
           util.puts "Unknown drink #{args}"
@@ -478,7 +480,7 @@ bartender = (userAuth, selfId, roomId) ->
       
       if name isnt ""
         # Initialize users
-        if user = _un.find(data.users, (user) -> norm(user.name) is norm(args))
+        if user = _.find(data.users, (user) -> norm(user.name) is norm(args))
             
             burns = [
               "#{user.name}, you're out of your game. I heard you retired, and they named second place after you. BURRRNNNNNN!"
@@ -529,7 +531,7 @@ bartender = (userAuth, selfId, roomId) ->
       if typeof entry.cmd == "function" and entry.cmd.test(cmd_txt)
         return true
     
-    resolved_cmd = _un.detect(commands, cmd_matches)
+    resolved_cmd = _.detect(commands, cmd_matches)
     
     if resolved_cmd
         resolved_cmd.fn(user, args)
