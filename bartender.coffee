@@ -444,7 +444,7 @@ bartender = (userAuth, selfId, roomId) ->
     if uid not in _.keys tabs
       msg =  "#{user.name} has yet to order anything!"
     else
-      msg = "#{user.name} owes me $" + -1*tabs[uid] + " and better pay up soon!"
+      msg = "#{user.name} owes me $" + tabs[uid] + " and better pay up soon!"
     bot.speak msg
   
   cmd_toast = (user,args) ->
