@@ -368,24 +368,6 @@ bartender = (userAuth, selfId, roomId) ->
       roomUsers[user.userid] = user
   
   cmd_drinks = (user, args) ->
-    uid = user.userid
-    if uid not in _.keys tabs
-      tabs[uid] = -7
-      db.collection 'tabs', (err,col) ->
-        col.insert
-          tabUserInfo: user
-          owed: -7
-          removed: false
-    else
-      tabs[uid] = tabs[uid] - 7
-      db.collection 'tabs', (err,col) ->
-        criteria = 
-          'tabUserInfo.userid': uid
-        modification = 
-          '$set':
-            owed: tabs[uid]
-        col.update criteria, modification, true
-      
     msgs = [
       "This party is bumping! Drinks all around!"
       "Hey #{user.name}, here's a little something to get you rocking!"
@@ -427,13 +409,34 @@ bartender = (userAuth, selfId, roomId) ->
           util.puts "Unknown drink #{args}"
         else
           selection = "One " + all_drinks[index] + ", coming right up!"
+          increase_tab(user)
       else
         selection = random_select(msgs)
+        increase_tab(user)
     
     if typeof selection is "function"
       selection = selection(user)
     
     bot.speak selection
+    
+  increase_tab = (user) ->
+    uid = user.userid
+    if uid not in _.keys tabs
+      tabs[uid] = -7
+      db.collection 'tabs', (err,col) ->
+        col.insert
+          tabUserInfo: user
+          owed: -7
+          removed: false
+    else
+      tabs[uid] = tabs[uid] - 7
+      db.collection 'tabs', (err,col) ->
+        criteria = 
+          'tabUserInfo.userid': uid
+        modification = 
+          '$set':
+            owed: tabs[uid]
+        col.update criteria, modification, true
     
   cmd_tab = (user) ->
     uid = user.userid
@@ -477,6 +480,7 @@ bartender = (userAuth, selfId, roomId) ->
     
     if lcFood of foods
       selection = foods[lcFood]
+      increase_tab(user)
     else
       selection = "We don't serve your kind here!"
       util.puts "Unknown food #{args}"
