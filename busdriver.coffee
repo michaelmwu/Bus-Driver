@@ -252,6 +252,9 @@ busDriver = (options) ->
     if name of roomUsernames
       roomUsers[roomUsernames[name]]
   
+  is_uid = (uid) ->
+    uid and uid.length == 24
+  
   get_uid = (name) ->
     roomUsernames[norm(name)]
   
@@ -688,6 +691,37 @@ busDriver = (options) ->
       
       bot.speak msg
   
+  cmd_dbs
+    roomInfo (data) ->
+      db_pat =  /.*d.*?_.*?b.*/i
+      
+      daddy = false
+      
+      is_db = (name) ->
+        if name is "d-_-b"
+          daddy = true
+          return false
+        else
+          return db_pat.test(name)
+      
+      dbs = _.select(data.users, (user) -> is_db(user.name))
+      dbs = _.map(dbs, (user) -> user.name)
+      
+      msg = "d-_-b team, ASSEMBLEEEE!"
+      
+      if dbs.length > 0
+        msg += " There are #{dbs.length} soldiers in the d-_-b army here: " + dbs.join(", ") + "."
+      else
+        msg += " There are no d-_-bs here..."
+      
+      if daddy
+        if dbs.length > 0
+          msg += " And d-_-b is here!"
+        else
+          msg += " But d-_-b is here!"
+      
+      bot.speak msg
+  
   cmd_setsongs = (user, args) ->
     setsongs_pat = /^(.+?)\s+(-?\d+)\s*$/
     
@@ -730,23 +764,28 @@ busDriver = (options) ->
     boot_pat = /^\s*(.*?)\s*:\s*([^\s].+?)\s*$/
     
     if match = boot_pat.exec(args)
+      uid = undefined
       name = match[1]
       reason = match[2]
     
-      if user = named_user(name)
-        if user.userid is options.userId
+      if is_uid(name)
+        uid = name
+      else if user = named_user(name)
+        uid = user.userid
+        
+      if uid
+        if uid is options.userId
           bot.speak "I'm not booting myself!"
         else
           if selfModerator
-            bot.bootUser(user.userid, reason)
-            bot.speak "Banning #{roomUsers[user.userid].name}"
+            bot.bootUser(uid, reason)
+            bot.speak "Banning #{name}"
           else
-            bot.speak "I'm powerless to ban anyone, but #{roomUsers[user.userid].name} is on the list!"
+            bot.speak "I'm powerless to ban anyone, but #{name} is on the list!"
                   
-          permabanned[user.userid] = reason
+          permabanned[uid] = reason
     else
       bot.speak "#{user.name} you have to give a reason to ban someone!"
-      
   
   cmd_unpermaban = (user, args) ->
     name = args.toLowerCase()
@@ -958,6 +997,7 @@ busDriver = (options) ->
     {cmd: "/stagedive", fn: cmd_stagedive, help: "stage dive!"}
     {cmd: "/vips", fn: cmd_vips, help: "list vips in the bus"}
     # {cmd: "/vuthers", fn: cmd_vuthers, help: "vuther clan roll call"}
+    {cmd: "/d-_-bs", fn: cmd_dbs, help: "d-_-b's roll call"}
     
     # Mod commands
     {cmd: "/chinesefiredrill", fn: cmd_chinesefiredrill, owner: true, help: "boot everybody off stage. Must type THIS IS ONLY A DRILL :D"}
