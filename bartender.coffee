@@ -393,7 +393,7 @@ bartender = (userAuth, selfId, roomId) ->
       "/me cuts a lime"
     ]
     
-    lcDrink = args.trim().toLowerCase()
+    lcDrink = norm(args)
     
     selection = null
     
@@ -481,7 +481,7 @@ bartender = (userAuth, selfId, roomId) ->
     
   
   cmd_eat = (user,args) ->
-    lcFood = args.trim().toLowerCase()
+    lcFood = norm(args)
     selection = null
     
     if lcFood of foods
