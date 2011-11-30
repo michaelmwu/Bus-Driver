@@ -427,7 +427,7 @@ bartender = (userAuth, selfId, roomId) ->
     
   cmd_tab = (user,args) ->
     uid = "#{user.userid}"
-    if uid not in _.keys tabs
+    if uid not in tabs
       bot.speak "#{user.name} has yet to order anything!"
     else
       msg = "#{user.name} owes me $" + tabs[uid] + " and better pay up soon!"
