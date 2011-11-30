@@ -9,7 +9,7 @@ Db = require('mongodb').Db
 Connection = require('mongodb').Connection
 Server = require('mongodb').Server
   
-db = new Db 'BusBartender', new Server '127.0.0.1', 27017, {}
+db = new Db 'Bus-Bartender', new Server '127.0.0.1', 27017, {}
 db.open (err, _db)->
 	db = _db
 
