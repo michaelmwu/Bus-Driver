@@ -8,6 +8,7 @@ exports.greetings =
   "4e1a6db9a3f75162f5018c05": (user) -> "Watch out, #{user.name} is on the prowl!" # Elletiger
   "4e2a589c4fe7d0158608ac54": (user) -> "I await your command, master #{user.name}"
   "Frick": "SCATTER! It's bot overlord Frick!"
+  "4e0b90f6a3f75146750a09cb": (user) -> "My name is #{user.name}. We are Cybernetic Dubstep Organisms from the planet Wubwubwub." # Dima/Darkstar
   "4dfa5e724fe7d056c20c9db6": (user) -> "Everyone greet #{user.name}, the prettiest girl on this PARTY BUS!" # GalGal
   "IT'S OVER 9000!!!!": "Vegeta, what does the scouter say about his power level? It's OVER 9000!!!!"
   "Jellytime": "It's peanut butter JELLYTIME!"
