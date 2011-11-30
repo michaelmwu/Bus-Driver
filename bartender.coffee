@@ -336,12 +336,12 @@ bartender = (userAuth, selfId, roomId) ->
     if data.user[0].userid is selfId
       # We just joined, initialize
       criteria = 
-        null
-      db.collection 'tab', (err, col)->
+        removed: false
+      db.collection 'tabs', (err, col)->
         col.find criteria, (err, cursor)->
           cursor.each (err,doc)->
             if doc isnt null
-              tab[doc.tabUserInfo.userid] = doc.owed
+              tabs[doc.tabUserInfo.userid] = doc.owed
               
       # Add other collections like hearts, etc
       
@@ -357,21 +357,22 @@ bartender = (userAuth, selfId, roomId) ->
   
   cmd_drinks = (user, args) ->
     uid = "#{user.userid}"
-    if uid not in _.keys tab
-      tab[uid] = -7
-      db.collection 'tab', (err,col) ->
+    if uid not in _.keys tabs
+      tabs[uid] = -7
+      db.collection 'tabs', (err,col) ->
         col.insert
           tabUserInfo: user
           owed = -7
     else
-      tab[uid] = tab[uid] - 7
-      db.collection 'tab', (err,col) ->
+      tabs[uid] = tab[uid] - 7
+      db.collection 'tabs', (err,col) ->
         criteria = 
           'tabUserInfo.userid': user.userid
+          removed: false
         modification = 
           '$set':
-            owed = tab[uid]
-        col.update criteria modification
+            owed = tabs[uid]
+        col.update criteria modification, false
     
     msgs = [
       "This party is bumping! Drinks all around!"
@@ -424,10 +425,10 @@ bartender = (userAuth, selfId, roomId) ->
     
   cmd_tab = (user,args) ->
     uid = "#{user.userid}"
-    if uid not in _.keys tab
+    if uid not in _.keys tabs
       bot.speak "#{user.name} has yet to order anything!"
     else
-      msg = "#{user.name} owes me $" + tab[uid] + " and better pay up soon!"
+      msg = "#{user.name} owes me $" + tabs[uid] + " and better pay up soon!"
   
   cmd_toast = (user,args) ->
     toasts = [
