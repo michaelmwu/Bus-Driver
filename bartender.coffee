@@ -3,6 +3,14 @@ _un = require 'underscore'
 util = require 'util'
 r = require 'mersenne'
 
+  Db = require('mongodb').Db
+	Connection = require('mongodb').Connection
+	Server = require('mongodb').Server
+		
+	db = new Db 'BusBartender', new Server '127.0.0.1', 27017, {}
+	db.open (err, _db)->
+	db = _db
+
 
 bartender = (userAuth, selfId, roomId) ->
   if not userAuth
@@ -325,6 +333,15 @@ bartender = (userAuth, selfId, roomId) ->
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize
+      
+      db.collection 'tab', (err, col)->
+        col.find criteria, (err, cursor)->
+          cursor.each (err,doc)->
+            if doc isnt null
+              tab[doc.tabUserInfo.userid] = doc.owed
+              
+      # Add other collections like hearts, etc
+      
       bot.roomInfo (data) ->
         # Initialize users
         for user in data.users
@@ -336,6 +353,23 @@ bartender = (userAuth, selfId, roomId) ->
       roomUsers[user.userid] = user
   
   cmd_drinks = (user, args) ->
+    uid = "#{user.userid}"
+    if uid not in _.keys tab
+      tab[uid] = -7
+      db.collection 'tab', (err,col) ->
+        col.insert
+          tabUserInfo: user
+          owed = -7
+    else
+      tab[uid] = tab[uid] - 7
+      db.collection 'tab', (err,col) ->
+        criteria = 
+          'tabUserInfo.userid': user.userid
+        modification = 
+          '$set':
+            owed = tab[uid]
+        col.update criteria modification
+    
     msgs = [
       "This party is bumping! Drinks all around!"
       "Hey #{user.name}, here's a little something to get you rocking!"
@@ -385,6 +419,12 @@ bartender = (userAuth, selfId, roomId) ->
     
     bot.speak selection
     
+  cmd_tab = (user,args) ->
+    uid = "#{user.userid}"
+    if uid not in _.keys tab
+      bot.speak "#{user.name} has yet to order anything!"
+    else
+      msg = "#{user.name} owes me $" + tab[uid] + " and better pay up soon!"
   
   cmd_toast = (user,args) ->
     toasts = [
@@ -459,6 +499,7 @@ bartender = (userAuth, selfId, roomId) ->
   # Match regexes
   commands = [
     {cmd: /^\/drinks?$/, fn: cmd_drinks, help: "drinks"}
+    {cmd: /^\/tab$/, fn: cmd_tab, help: "tab announcer"}
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
     {cmd: /^\/eats?$/, fn: cmd_eat, help: "drinks"}
     {cmd: /^\/burn$/, fn: cmd_burn, help: "drinks"}
