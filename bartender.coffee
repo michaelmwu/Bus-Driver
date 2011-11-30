@@ -357,8 +357,8 @@ bartender = (userAuth, selfId, roomId) ->
       roomUsers[user.userid] = user
   
   cmd_drinks = (user, args) ->
-    uid = "#{user.userid}"
-    if uid not in tabs
+    uid = user.userid
+    if user.userid not in _.keys tabs
       tabs[uid] = -7
       bot.speak "Creating new tab for #{user.name}"
       db.collection 'tabs', (err,col) ->
@@ -427,8 +427,8 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak selection
     
   cmd_tab = (user,args) ->
-    uid = "#{user.userid}"
-    if uid not in tabs
+    uid = user.userid
+    if uid not in _.keys tabs
       bot.speak "#{user.name} has yet to order anything!"
     else
       msg = "#{user.name} owes me $" + tabs[uid] + " and better pay up soon!"
