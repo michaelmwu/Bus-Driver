@@ -358,7 +358,7 @@ bartender = (userAuth, selfId, roomId) ->
   
   cmd_drinks = (user, args) ->
     uid = "#{user.userid}"
-    if uid not in _.keys tabs
+    if uid not in tabs
       tabs[uid] = -7
       db.collection 'tabs', (err,col) ->
         col.insert
