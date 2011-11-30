@@ -448,7 +448,7 @@ bartender = (userAuth, selfId, roomId) ->
       if curTab > 0
         msg = "#{user.name} owes me $" + curTab + " and better pay up soon!"
       else
-        msg = "#{user.name} currently has $" + curTab + " to spend in here!"
+        msg = "#{user.name} currently has $" + -1*curTab + " to spend in here!"
     bot.speak msg
   
   cmd_toast = (user,args) ->
