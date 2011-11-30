@@ -401,6 +401,7 @@ bartender = (userAuth, selfId, roomId) ->
       selection = special_drinks[lcDrink]
       if typeof selection is "object"
         selection = random_select(selection)
+      change_tab(user,8)
     else
       if lcDrink and lcDrink isnt ""
         index = _.indexOf(lc_all_drinks,lcDrink)
@@ -409,27 +410,27 @@ bartender = (userAuth, selfId, roomId) ->
           util.puts "Unknown drink #{args}"
         else
           selection = "One " + all_drinks[index] + ", coming right up!"
-          increase_tab(user)
+          change_tab(user,6)
       else
         selection = random_select(msgs)
-        increase_tab(user)
+        change_tab(user,4)
     
     if typeof selection is "function"
       selection = selection(user)
     
     bot.speak selection
     
-  increase_tab = (user) ->
+  change_tab = (user,amount) ->
     uid = user.userid
     if uid not in _.keys tabs
-      tabs[uid] = -7
+      tabs[uid] = amount
       db.collection 'tabs', (err,col) ->
         col.insert
           tabUserInfo: user
-          owed: -7
+          owed: tabs[uid]
           removed: false
     else
-      tabs[uid] = tabs[uid] - 7
+      tabs[uid] = tabs[uid] + amount
       db.collection 'tabs', (err,col) ->
         criteria = 
           'tabUserInfo.userid': uid
@@ -471,6 +472,7 @@ bartender = (userAuth, selfId, roomId) ->
       "To alcohol! The cause of, and solution to all of life's problems!"
       "To good times making bad decisions!"
     ]
+    change_tab(user,-3)
     bot.speak random_select(toasts)
     
   
@@ -480,7 +482,7 @@ bartender = (userAuth, selfId, roomId) ->
     
     if lcFood of foods
       selection = foods[lcFood]
-      increase_tab(user)
+      change_tab(user,5)
     else
       selection = "We don't serve your kind here!"
       util.puts "Unknown food #{args}"
