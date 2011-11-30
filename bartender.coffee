@@ -336,9 +336,10 @@ bartender = (userAuth, selfId, roomId) ->
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize
-      criteria = 
-        removed: false
+      db.tabUserInfo.drop()
       db.collection 'tabs', (err, col)->
+        criteria = 
+          removed: false
         col.find criteria, (err, cursor)->
           cursor.each (err,doc)->
             if doc isnt null
