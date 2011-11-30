@@ -426,7 +426,7 @@ bartender = (userAuth, selfId, roomId) ->
     bot.speak selection
     
   cmd_tab = (user,args) ->
-    uid = 'user.userid'
+    uid = "#{user.userid}"
     if uid not in _.keys tabs
       bot.speak "#{user.name} has yet to order anything!"
     else
