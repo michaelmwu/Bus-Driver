@@ -654,6 +654,37 @@ busDriver = (options) ->
       
       bot.speak msg
   
+  cmd_dbs
+    roomInfo (data) ->
+      db_pat =  /.*d.*?_.*?b.*/i
+      
+      daddy = false
+      
+      is_db = (name) ->
+        if name is "d-_-b"
+          daddy = true
+          return false
+        else
+          return db_pat.test(name)
+      
+      dbs = _.select(data.users, (user) -> is_db(user.name))
+      dbs = _.map(dbs, (user) -> user.name)
+      
+      msg = "d-_-b team, ASSEMBLEEEE!"
+      
+      if dbs.length > 0
+        msg += " There are #{dbs.length} soldiers in the d-_-b army here: " + dbs.join(", ") + "."
+      else
+        msg += " There are no d-_-bs here..."
+      
+      if daddy
+        if dbs.length > 0
+          msg += " And d-_-b is here!"
+        else
+          msg += " But d-_-b is here!"
+      
+      bot.speak msg
+  
   cmd_setsongs = (user, args) ->
     setsongs_pat = /^(.+?)\s+(-?\d+)\s*$/
     
@@ -929,6 +960,7 @@ busDriver = (options) ->
     {cmd: "/stagedive", fn: cmd_stagedive, help: "stage dive!"}
     {cmd: "/vips", fn: cmd_vips, help: "list vips in the bus"}
     # {cmd: "/vuthers", fn: cmd_vuthers, help: "vuther clan roll call"}
+    {cmd: "/d-_-bs", fn: cmd_dbs, help: "d-_-b's roll call"}
     
     # Mod commands
     {cmd: "/chinesefiredrill", fn: cmd_chinesefiredrill, owner: true, help: "boot everybody off stage. Must type THIS IS ONLY A DRILL :D"}
