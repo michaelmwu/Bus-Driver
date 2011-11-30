@@ -364,7 +364,7 @@ bartender = (userAuth, selfId, roomId) ->
           tabUserInfo: user
           owed = -7
     else
-      tabs[uid] = tab[uid] - 7
+      tabs[uid] = tabs[uid] - 7
       db.collection 'tabs', (err,col) ->
         criteria = 
           'tabUserInfo.userid': user.userid
