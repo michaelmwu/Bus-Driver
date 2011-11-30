@@ -444,7 +444,11 @@ bartender = (userAuth, selfId, roomId) ->
     if uid not in _.keys tabs
       msg =  "#{user.name} has yet to order anything!"
     else
-      msg = "#{user.name} owes me $" + tabs[uid] + " and better pay up soon!"
+      curTab = tabs[uid]
+      if curTab > 0
+        msg = "#{user.name} owes me $" + curTab + " and better pay up soon!"
+      else
+        msg = "{#user.name} currently has $" + curTab + " to spend in here!"
     bot.speak msg
   
   cmd_toast = (user,args) ->
@@ -517,7 +521,9 @@ bartender = (userAuth, selfId, roomId) ->
     
       bot.speak selection
     
-    
+  cmd_comment = (user,args) ->
+    change_tab(user,-1)
+  
   
   # Match regexes
   commands = [
@@ -525,7 +531,8 @@ bartender = (userAuth, selfId, roomId) ->
     {cmd: /^\/tab$/, fn: cmd_tab, help: "tab announcer"}
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
     {cmd: /^\/eats?$/, fn: cmd_eat, help: "drinks"}
-    {cmd: /^\/burn$/, fn: cmd_burn, help: "drinks"}
+    {cmd: /^\/burn$/, fn: cmd_burn, help: "burn"}
+    {cmd: /^\/.*/, fn: cmd_comment, help: "decrements tab"}
   ]
   
   bartender.commands = commands
