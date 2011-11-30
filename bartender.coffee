@@ -532,7 +532,7 @@ bartender = (userAuth, selfId, roomId) ->
     {cmd: /^\/toasts?$/, fn: cmd_toast, help: "toast!"}
     {cmd: /^\/eats?$/, fn: cmd_eat, help: "drinks"}
     {cmd: /^\/burn$/, fn: cmd_burn, help: "burn"}
-    {cmd: /^\/.*/, fn: cmd_comment, help: "decrements tab"}
+    {cmd: /^\.*/, fn: cmd_comment, help: "decrements tab"}
   ]
   
   bartender.commands = commands
