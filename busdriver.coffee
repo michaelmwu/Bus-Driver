@@ -691,7 +691,7 @@ busDriver = (options) ->
       
       bot.speak msg
   
-  cmd_dbs
+  cmd_dbs = ->
     roomInfo (data) ->
       db_pat =  /.*d.*?_.*?b.*/i
       
