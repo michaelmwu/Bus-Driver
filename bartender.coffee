@@ -31,6 +31,7 @@ bartender = (userAuth, selfId, roomId) ->
   
   roomUsernames = {}
   roomUsers = {}
+  tabs = {}
   
   plural = (count) ->
     if count == 1
