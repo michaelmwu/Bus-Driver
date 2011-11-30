@@ -362,7 +362,8 @@ bartender = (userAuth, selfId, roomId) ->
       db.collection 'tabs', (err,col) ->
         col.insert
           tabUserInfo: user
-          owed = -7
+          owed: -7
+          removed: false
     else
       tabs[uid] = tabs[uid] - 7
       db.collection 'tabs', (err,col) ->
@@ -371,7 +372,7 @@ bartender = (userAuth, selfId, roomId) ->
           removed: false
         modification = 
           '$set':
-            owed = tabs[uid]
+            owed: tabs[uid]
         col.update criteria modification, false
     
     msgs = [
