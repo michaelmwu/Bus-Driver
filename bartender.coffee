@@ -370,11 +370,10 @@ bartender = (userAuth, selfId, roomId) ->
       db.collection 'tabs', (err,col) ->
         criteria = 
           'tabUserInfo.userid': uid
-          removed: false
         modification = 
           '$set':
             owed: tabs[uid]
-        col.update criteria, modification
+        col.update criteria, modification, true
       
     msgs = [
       "This party is bumping! Drinks all around!"
@@ -430,7 +429,7 @@ bartender = (userAuth, selfId, roomId) ->
     if uid not in _.keys tabs
       msg =  "#{user.name} has yet to order anything!"
     else
-      msg = "#{user.name} owes me $" + tabs[uid] + " and better pay up soon!"
+      msg = "#{user.name} owes me $" + -1*tabs[uid] + " and better pay up soon!"
     bot.speak msg
   
   cmd_toast = (user,args) ->
