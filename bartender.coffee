@@ -368,6 +368,7 @@ bartender = (userAuth, selfId, roomId) ->
           removed: false
     else
       tabs[uid] = tabs[uid] - 7
+      bot.speak "Current tab is at $"+tabs[uid]
       db.collection 'tabs', (err,col) ->
         criteria = 
           'tabUserInfo.userid': uid
