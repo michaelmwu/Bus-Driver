@@ -653,7 +653,7 @@ busDriver = (options) ->
       else
         out "There are no VIPs in the Party Bus right now"
   
-  cmd_party = ->
+  cmd_party = (user, args) ->
     if norm(args) is "on wayne"
       bot.speak "Party on Garth!"
     else
@@ -1007,6 +1007,7 @@ busDriver = (options) ->
   # TODO, match regexes, and have a hidden, so commands automatically lists
   commands = [
     {cmd: "/allowed", fn: cmd_allowed, help: "allowed djs"}
+    {cmd: "/ball", fn: cmd_ballsohard, help: "ball so hard"}
     {cmd: "/commands", fn: cmd_commands, hidden: true, help: "get list of commands"}
     {cmd: "/dance", fn: cmd_dance, help: "dance!"}
     {cmd: "/daps", fn: cmd_daps, help: "daps"}
