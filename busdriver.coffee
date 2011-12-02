@@ -343,17 +343,25 @@ busDriver = (options) ->
     roomUsers[user.userid] = user
     active[user.userid] = true
     update_idle(user.userid)
+    
+    db.collection 'users', (err, col)->
+      criteria =
+        'userInfo.userid': user.userid
+      modifications =
+        '$set':
+          'userInfo': user
+      col.update criteria, modifications, {upsert: true}
   
   bot.on "registered", (data) ->
     if data.user[0].userid is selfId
       # We just joined, initialize things
-      db.collection 'vips', (err, col)->
+      db.collection 'users', (err, col)->
         criteria = 
-          unvipedAt: false
+          vip: true
         col.find criteria, (err, cursor) ->
           cursor.each (err,doc)->
             if doc isnt null
-              vips[doc.vipUserInfo.userid] = doc.vipUserInfo
+              vips[doc.userInfo.userid] = doc.userInfo
 
       roomInfo (data) ->
         # Initialize users
@@ -560,27 +568,16 @@ busDriver = (options) ->
       else
         bot.speak "#{target.name} is already allowed on deck"
     else
-      out "I couldn't find #{args} to add to the allowed DJs list!"
+      out "I couldn't find #{args} to add to the allowed DJ list!"
   
   cmd_unallow = (user, args) ->
     dj = named_user(args)
     
-    if dj.userid of vips
-      bot.speak "#{dj.name} is no longer on the allowed DJs list"
-      delete vips[dj.userid]
-
-      db.collection 'vips', (err, col)->
-        criteria = 
-          'vipUserInfo.userid': vipUser.userid
-          unvipedAt: false
-        modifications = 
-          '$set':
-            unvipedAt: new Date()
-            unvipedBy: user
-        col.update criteria, modifications, true
-
+    if dj.userid of allowed
+      bot.speak "#{dj.name} is no longer on the allowed DJ list"
+      delete allowed[dj.userid]
     else
-      bot.speak "#{args} is not a VIP in the Party Bus!"
+      bot.speak "#{args} is not on the allowed DJ list!"
   
   cmd_allowed = (user, args, out) ->
     args = norm(args)
@@ -592,7 +589,7 @@ busDriver = (options) ->
         allowed_list = (roomUsers[uid].name for uid of users).join(", ")
         out "All allowed DJs: #{allowed_list}"
       else
-        out "There are no VIPs in the Party Bus right now"
+        out "There is no one on the allowed DJs list!"
     else
       present_users = _.filter(users, (uid) -> uid of active)
       
@@ -604,7 +601,7 @@ busDriver = (options) ->
   
   cmd_vip = (user, args, out) ->
     if vipUser = named_user(args)
-      if vipUser.userid not of vips
+      if vipUser.userid not in _.keys vips
         vips[vipUser.userid] = vipUser
         bot.speak "Party all you want, #{vipUser.name}, because you're now a VIP!"
 
@@ -613,8 +610,9 @@ busDriver = (options) ->
             'userInfo.userid': vipUser.userid
           modifications =
             '$set':
+              'userInfo': vipUser
               'vip': true
-          col.update criteria, modifications, true
+          col.update criteria, modifications, {upsert: true}
       else
         bot.speak "#{vipUser.name} is already a VIP on the Party Bus!"
     else
@@ -627,16 +625,14 @@ busDriver = (options) ->
       bot.speak "#{vipUser.name} is no longer special"
       delete vips[vipUser.userid]
 
-      db.collection 'vips', (err, col)->
-        criteria = 
-          'vipUserInfo.userid': vipUser.userid
-          unvipedAt: false
-        modifications = 
+      db.collection 'users', (err, col)->
+        criteria =
+          'userInfo.userid': vipUser.userid
+        modifications =
           '$set':
-            unvipedAt: new Date()
-            unvipedBy: user
-        col.update criteria, modifications, true
-
+            'userInfo': vipUser
+            'vip': false
+        col.update criteria, modifications, {upsert: true}
     else
       bot.speak "#{args} is not a VIP in the Party Bus!"
   
@@ -809,6 +805,37 @@ busDriver = (options) ->
           msg += " And daddy vuther is here!"
         else
           msg += " But daddy vuther is here!"
+      
+      bot.speak msg
+  
+  cmd_dbs = ->
+    roomInfo (data) ->
+      db_pat =  /.*d.*?_.*?b.*/i
+      
+      daddy = false
+      
+      is_db = (name) ->
+        if name is "d-_-b"
+          daddy = true
+          return false
+        else
+          return db_pat.test(name)
+      
+      dbs = _.select(data.users, (user) -> is_db(user.name))
+      dbs = _.map(dbs, (user) -> user.name)
+      
+      msg = "d-_-b team, ASSEMBLEEEE!"
+      
+      if dbs.length > 0
+        msg += " There are #{dbs.length} soldiers in the d-_-b army here: " + dbs.join(", ") + "."
+      else
+        msg += " There are no d-_-bs here..."
+      
+      if daddy
+        if dbs.length > 0
+          msg += " And d-_-b is here!"
+        else
+          msg += " But d-_-b is here!"
       
       bot.speak msg
   
@@ -997,6 +1024,7 @@ busDriver = (options) ->
     {cmd: "/stagedive", fn: cmd_stagedive, help: "stage dive!"}
     {cmd: "/vips", fn: cmd_vips, help: "list vips in the bus"}
     # {cmd: "/vuthers", fn: cmd_vuthers, help: "vuther clan roll call"}
+    {cmd: "/d-_-bs", fn: cmd_dbs, help: "d-_-b's roll call"}
     
     # Mod commands
     {cmd: "/allow", fn: cmd_allow, owner: true, help: "allow a dj"}
