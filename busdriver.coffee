@@ -3,14 +3,15 @@ irc = require 'irc'
 _ = require 'underscore'
 util = require 'util'
 readline = require 'readline'
+mongodb = require('mongodb')
 
-Db = require('mongodb').Db
-Connection = require('mongodb').Connection
-Server = require('mongodb').Server
-
-db = new Db 'TheBusDriver', new Server '127.0.0.1', 27017, {}
-db.open (err, _db)->
-  db = _db
+db = undefined
+db_connection = new mongodb.Db 'TheBusDriver', (new mongodb.Server '127.0.0.1', 27017, {})
+db_connection.open (err, _db)->
+  if err
+    util.puts err
+  else
+    db = _db
 
 greet = require './greetings'
 
@@ -33,39 +34,96 @@ busDriver = (options) ->
   options.ircHandle = options.ircHandle or "BusDriver"
   selfId = options.userId
   
+  # Constants
+  MINUTE = 60*1000
+  
+  NORMAL_MODE = 0
+  VIP_MODE = 1
+  BATTLE_MODE = 2
+  
+  room_mode = NORMAL_MODE
+  debug_on = false
+  
+  config = {}
+  
+  config_props =
+    max_songs: {default: 3, unit: "song", format: "+int", name: "song limit"}
+    camp_songs: {default: 2, unit: "song", format: "+int", name: "DJ autoescort songs"} # How much tolerance we have before we just escort
+    wait_songs: {default: 3, unit: "song", format: "+int", name: "DJ naughty corner songs"}
+    wait_songs_day: {default: 3, unit: "song", format: "+int", name: "DJ naughty corner songs for day time"}
+    wait_songs_night: {default: 1, unit: "song", format: "+int", name: "DJ naughty corner songs for night time"}
+    wait_time: {default: 15, unit: "minute", format: "+int", name: "DJ naughty corner time"}
+    moderate_dj_min: {default: 3, unit: "dj", format: "+int", name: "enforced rules DJ minimum"} # Minimum number of DJs to activate reup modding
+    dj_warn_time: {default: 11, unit: "minute", format: "+int", name: "AFK DJ warning time"}
+    dj_escort_time: {default: 15, unit: "minute", format: "+int", name: "AFK DJ escort time"}
+    mode: {default: NORMAL_MODE, format: "room_mode", name: "Room mode", set: ((value) -> room_mode = value), get: -> room_mode}
+    debug: {default: off, format: "onoff", name: "Debug mode", set: ((value) -> debug_on = value), get: -> debug_on}
+    rules_link: {default: "http://bit.ly/thepartybus", name: "Rules link"}
+    greetings: {default: true, format: "onoff", name: "Rules link"}
+  
+  to_positive_int = (arg) ->
+    result = parseInt(arg)
+    
+    if not isNaN(result) and result > 0
+      result
+  
+  pretty_int = (value, unit) ->
+    if unit?
+      "#{value} #{unit}#{plural(value)}"
+    else
+      "#{value}"
+  
+  to_bool = (arg) ->
+    arg = norm(arg)
+    
+    arg = arg is "true" or arg is "on" or arg is "yes"
+  
+  to_room_mode = (arg) ->
+    arg = norm(arg)
+    
+    if args is "vips" or args is "vip"
+      bot.speak "It's a VIP party in here! VIPs (and mods) only on deck!"
+      VIP_MODE
+    else if args is "battle"
+      bot.speak "Ready to BATTLE?!!!"
+      BATTLE_MODE
+    else
+      bot.speak "Back to the ho-hum. FFA, #{get_config('max_songs')} song limit, #{get_config('wait_songs')} wait time between sets"
+      NORMAL_MODE
+  
+  pretty_room_mode = (value) ->
+    if value is VIP_MODE
+      bot.speak "It's a VIP party in here! VIPs (and mods) only on deck!"
+    else if value is BATTLE_MODE
+      bot.speak "Ready to BATTLE?!!!"
+    else
+      bot.speak "The ho-hum. FFA, #{get_config('max_songs')} song limit, #{get_config('wait_songs')} wait time between sets"
+  
+  config_format =
+    "+int": {to: to_positive_int, pretty: pretty_int}
+    "onoff": {to: to_bool, pretty: -> if value then "on" else "off"}
+    "room_mode": {to: to_room_mode, pretty: pretty_room_mode}
+  
+  get_config = (x) ->    
+    if x of config_props
+      props = config_props[x]
+    
+      result = config[x] ? props.default
+  
+  set_config = (x, value) ->
+    if x of config_props
+      props = config_props[x]
+      
+      value = (if props.format? and (to = config_format[props.format]?.to)? then to(value) else value) ? props.default
+      
+      config[x] = value
+  
   #ircClient = new irc.Client options.ircServer, options.ircHandle, 
   #  channels: [options.ircChan]
   
   #ircClient.addListener "message", (from, to, message)->
     # irc handling
     # no custom commands yet
-
-  DJ_MAX_SONGS = 3
-  
-  # How much tolerance we have before we just escort
-  DJ_MAX_PLUS_SONGS = 2
-  
-  MINUTE = 60*1000
-  
-  DJ_WAIT_SONGS = 3
-  DJ_WAIT_SONGS_NIGHT = 1
-  DJ_WAIT_TIME = 15 * MINUTE
-  
-  night = false
-  
-  wait_songs = ->
-    if not night
-      DJ_WAIT_SONGS
-    else
-      DJ_WAIT_SONGS_NIGHT
-  
-  # Minimum number of DJs to activate reup modding
-  MODERATE_DJ_MIN = 3
-  
-  # Time to hard escort DJs
-  DJ_AFK_ESCORT_TIMEOUT = 15 * MINUTE
-  
-  DJ_AFK_WARN_TIMEOUT = 11 * MINUTE
   
   songName = ""
   upVotes = 0
@@ -84,6 +142,7 @@ busDriver = (options) ->
   lamers = {}
   mods = {}
   vips = {}
+  allowed = {}
   currentDj = undefined
   lastDj = undefined
   warnedDjs = {}
@@ -92,16 +151,7 @@ busDriver = (options) ->
   busDriver.commands = []
   permabanned = {}
   enabled = true
-  debug_on = false
-  
-  NORMAL_MODE = 0
-  VIP_MODE = 1
-  BATTLE_MODE = 2
-  
-  room_mode = NORMAL_MODE
-  
-  DEFAULT_RULES = "http://bit.ly/partybusrules"
-  rules_link = DEFAULT_RULES
+  boost = false
   
   pastDjSongCount = {}
   
@@ -198,19 +248,19 @@ busDriver = (options) ->
 
     if room_mode is NORMAL_MODE
       # Only mod if there are some minimum amount of DJs
-      if enabled and _.keys(djSongCount).length >= MODERATE_DJ_MIN
+      if enabled and _.keys(djSongCount).length >= get_config('moderate_dj_min')
         escorted = {}
         
         # Escort DJs that haven't gotten off!
         for dj in _.keys(campingDjs)
           campingDjs[dj]++
           
-          if dj not of vips and selfModerator and campingDjs[dj] >= DJ_MAX_PLUS_SONGS
+          if dj not of vips and selfModerator and campingDjs[dj] >= get_config('camp_songs')
             # Escort off stage
             escort(dj)
             escorted[dj] = true
         
-        if lastDj and lastDj not of escorted and lastDj not of vips and djSongCount[lastDj] >= DJ_MAX_SONGS
+        if lastDj and lastDj not of escorted and lastDj not of vips and djSongCount[lastDj] >= get_config('max_songs')
           bot.speak "#{roomUsers[lastDj].name}, you've played #{djSongCount[lastDj]} songs already! Let somebody else get on the decks!"
           
           if lastDj not of campingDjs
@@ -220,7 +270,7 @@ busDriver = (options) ->
         djWaitCount[dj]++
         
         # Remove from timeout list if the DJ has waited long enough
-        if djWaitCount[dj] >= wait_songs()
+        if djWaitCount[dj] >= get_config('wait_songs')
           delete djWaitCount[dj]
           delete pastDjSongCount[dj]
     # else if room_mode is BATTLE_MODE
@@ -277,10 +327,10 @@ busDriver = (options) ->
       if uid of lastActivity
         idle = elapsed(lastActivity[uid])
         
-        if idle > DJ_AFK_WARN_TIMEOUT and uid not of warnedDjs
+        if idle > get_config('dj_warn_time') * MINUTE and uid not of warnedDjs
           bot.speak "#{roomUsers[uid].name}, no falling asleep on deck!"
           warnedDjs[uid] = true
-        if idle > DJ_AFK_ESCORT_TIMEOUT
+        if idle > get_config('dj_escort_time') * MINUTE
           if uid isnt currentDj
             escort(uid)
       else
@@ -300,7 +350,7 @@ busDriver = (options) ->
       db.collection 'vips', (err, col)->
         criteria = 
           unvipedAt: false
-        col.find criteria, (err, cursor)->
+        col.find criteria, (err, cursor) ->
           cursor.each (err,doc)->
             if doc isnt null
               vips[doc.vipUserInfo.userid] = doc.vipUserInfo
@@ -336,9 +386,9 @@ busDriver = (options) ->
         return
       else
         bot.speak "I can't boot you, #{user.name}, but you've been banned for #{permabanned[user.userid]}"
-      
-    # Only say hello to people that have left more than REJOIN_MESSAGE_WAIT_TIME ago    
-    if user.userid isnt selfId and (not roomUsersLeft[user.userid] or now().getTime() - roomUsersLeft[user.userid].getTime() > REJOIN_MESSAGE_WAIT_TIME)
+    
+    # Only say hello to people that have left more than REJOIN_MESSAGE_WAIT_TIME ago
+    if get_config('greetings') and user.userid isnt selfId and (not roomUsersLeft[user.userid] or now().getTime() - roomUsersLeft[user.userid].getTime() > REJOIN_MESSAGE_WAIT_TIME)
       if greeting = get_greeting(user)
         delay = ()->
           bot.speak greeting
@@ -401,26 +451,34 @@ busDriver = (options) ->
   DJ_REUP_TIME = 20 * 60 * 1000
 
   bot.on "add_dj", (data)->
-    update_name(data.user[0].name, data.user[0].userid)
-    uid = data.user[0].userid
+    user = data.user[0]
+    update_name(user.name, user.userid)
+    uid = user.userid
     update_idle(uid)
     
-    if room_mode is NORMAL_MODE
-      if enabled and _.keys(djSongCount).length >= MODERATE_DJ_MIN
-        if uid of djWaitCount and uid not of vips and djWaitCount[uid] <= wait_songs()
-          waitSongs = wait_songs() - djWaitCount[uid]
-          bot.speak "#{data.user[0].name}, party foul! Wait #{waitSongs} more song#{plural(waitSongs)} before getting on the decks again!"
-          
+    if boost
+      if not (uid of vips or uid of allowed or is_mod(uid) or is_owner(uid)) and selfModerator
+        # Escort off stage
+        escort(uid)
+        
+        bot.speak "Hey #{user.name}, back of the bus for you! We're letting a VIP up on stage right now!"
+    else
+      if room_mode is NORMAL_MODE
+        if enabled and _.keys(djSongCount).length >= get_config('moderate_dj_min')
+          if uid of djWaitCount and uid not of vips and djWaitCount[uid] <= get_config('wait_songs')
+            waitSongs = get_config('wait_songs') - djWaitCount[uid]
+            bot.speak "#{user.name}, party foul! Wait #{waitSongs} more song#{plural(waitSongs)} before getting on the decks again!"
+            
+            if selfModerator
+              # Escort off stage
+              escort(uid)
+      else if room_mode is VIP_MODE
+        if not (uid of vips or is_mod(uid) or is_owner(uid))
           if selfModerator
             # Escort off stage
             escort(uid)
-    else if room_mode is VIP_MODE
-      if not (uid of vips or is_mod(uid) or is_owner(uid))
-        if selfModerator
-          # Escort off stage
-          escort(uid)
-        bot.speak "#{data.user[0].name}, it's VIPs only on deck right now!"
-#    else if room_mode is BATTLE_MODE
+          bot.speak "#{user.name}, it's VIPs only on deck right now!"
+  #    else if room_mode is BATTLE_MODE
       
     # Resume song count if DJ rejoined too quickly
     if uid of pastDjSongCount and now().getTime() - pastDjSongCount[uid].when.getTime() < DJ_REUP_TIME
@@ -432,7 +490,7 @@ busDriver = (options) ->
     uid = data.user[0].userid
     
     # Add to timeout list if DJ has played 
-    if enabled and djSongCount[uid] >= DJ_MAX_SONGS and not djWaitCount[uid]
+    if enabled and djSongCount[uid] >= get_config('max_songs') and not djWaitCount[uid]
       # I believe the new song message is triggered first. Could ignore the message if it is too soon
       djWaitCount[uid] = 0
       
@@ -494,18 +552,69 @@ busDriver = (options) ->
     else
       bot.speak "I'm powerless, do it yourself!"
   
+  cmd_allow = (user, args, out) ->
+    if target = named_user(args)
+      if target.userid not of vips
+        allowed[target.userid] = target
+        bot.speak "#{target.name}, get up on deck!"
+      else
+        bot.speak "#{target.name} is already allowed on deck"
+    else
+      out "I couldn't find #{args} to add to the allowed DJs list!"
+  
+  cmd_unallow = (user, args) ->
+    dj = named_user(args)
+    
+    if dj.userid of vips
+      bot.speak "#{dj.name} is no longer on the allowed DJs list"
+      delete vips[dj.userid]
+
+      db.collection 'vips', (err, col)->
+        criteria = 
+          'vipUserInfo.userid': vipUser.userid
+          unvipedAt: false
+        modifications = 
+          '$set':
+            unvipedAt: new Date()
+            unvipedBy: user
+        col.update criteria, modifications, true
+
+    else
+      bot.speak "#{args} is not a VIP in the Party Bus!"
+  
+  cmd_allowed = (user, args, out) ->
+    args = norm(args)
+    
+    users = _.keys(allowed).concat(_.keys(vips))
+    
+    if args is "all"
+      if _.keys(users).length > 0
+        allowed_list = (roomUsers[uid].name for uid of users).join(", ")
+        out "All allowed DJs: #{allowed_list}"
+      else
+        out "There are no VIPs in the Party Bus right now"
+    else
+      present_users = _.filter(users, (uid) -> uid of active)
+      
+      if present_users.length > 0
+        allowed_list = (roomUsers[uid].name for uid of present_users).join(", ")
+        out "Allowed DJs are #{allowed_list}"
+      else
+        out "There are no allowed DJs in the Party Bus right now"
+  
   cmd_vip = (user, args, out) ->
     if vipUser = named_user(args)
       if vipUser.userid not of vips
         vips[vipUser.userid] = vipUser
         bot.speak "Party all you want, #{vipUser.name}, because you're now a VIP!"
 
-        db.collection 'vips', (err, col)->
-          col.insert 
-            vipUserInfo: vipUser
-            vipedBy: user
-            vipedAt: new Date()
-            unvipedAt: false
+        db.collection 'users', (err, col)->
+          criteria =
+            'userInfo.userid': vipUser.userid
+          modifications =
+            '$set':
+              'vip': true
+          col.update criteria, modifications, true
       else
         bot.speak "#{vipUser.name} is already a VIP on the Party Bus!"
     else
@@ -547,10 +656,13 @@ busDriver = (options) ->
         out "Current VIPs in the Party Bus are #{vip_list}"
       else
         out "There are no VIPs in the Party Bus right now"
-      
   
   cmd_party = ->
-    bot.speak "AWWWWWW YEAHHHHHHH!"
+    if norm(args) is "on wayne"
+      bot.speak "Party on Garth!"
+    else
+      bot.speak "AWWWWWW YEAHHHHHHH!"
+    
     bot.vote "up"
   
   dances = [
@@ -559,6 +671,11 @@ busDriver = (options) ->
     "Teach me how to dougie!"
     "/me dougies"
     ]
+  
+  cmd_ballsohard = (user, args) ->
+    if norm(args) is "so hard"
+      bot.speak "Muhfuckas wanna fine me!"
+      bot.vote "up"
   
   cmd_dance = -> 
     bot.speak random_select(dances)
@@ -620,11 +737,11 @@ busDriver = (options) ->
   
   cmd_help = (user, args) ->
     if room_mode is VIP_MODE
-      bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: #{rules_link}. It's VIPs (and mods) only on deck right now!"
+      bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: #{get_config('rules_link')}. It's VIPs (and mods) only on deck right now!"
     else if room_mode is BATTLE_MODE
-      bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: #{rules_link}! It's a King of the Hill battle right now!"
+      bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: #{get_config('rules_link')}! It's a King of the Hill battle right now!"
     else if room_mode is NORMAL_MODE
-      bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: #{rules_link}"
+      bot.speak "Hey #{user.name}, welcome aboard the party bus. Read the room rules: #{get_config('rules_link')}"
   
   cmd_hidden = (cmd) ->
     cmd.hidden or cmd.owner or cmd.mod
@@ -639,7 +756,7 @@ busDriver = (options) ->
     if _.keys(djWaitCount).length == 0
       bot.speak "No DJs are in the naughty corner!"
     else
-      waiting_list = ("#{roomUsers[dj].name}: #{wait_songs() - count}" for dj, count of djWaitCount).join(", ") + " songs"
+      waiting_list = ("#{roomUsers[dj].name}: #{get_config('wait_songs') - count}" for dj, count of djWaitCount).join(", ") + " songs"
       bot.speak "DJ naughty corner: #{waiting_list}"
   
   cmd_queue = (user, args) ->
@@ -649,7 +766,7 @@ busDriver = (options) ->
       bot.speak "#{user.name}, the Party Bus has no queue! It's a King of the Hill battle right now!"
     else if room_mode is NORMAL_MODE
       if not queueEnabled
-        bot.speak "#{user.name}, the Party Bus has no queue! It's FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} song wait time"
+        bot.speak "#{user.name}, the Party Bus has no queue! It's FFA, #{get_config('max_songs')} song limit, #{get_config('wait_songs')} song wait time"
   
   cmd_queue_add = (user, args) ->
     if room_mode is VIP_MODE
@@ -658,7 +775,11 @@ busDriver = (options) ->
       bot.speak "#{user.name}, the Party Bus has no queue! It's a King of the Hill battle right now!"
     else if room_mode is NORMAL_MODE
       if not queueEnabled
-        bot.speak "#{user.name}, the Party Bus has no queue! It's FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} song wait time"
+        bot.speak "#{user.name}, the Party Bus has no queue! It's FFA, #{get_config('max_songs')} song limit, #{get_config('wait_songs')} song wait time"
+  
+  cmd_ragequit = (user) ->
+    bot.speak "Lol umadbro?"
+    bot.bootUser(user.userid, "gtfo")
   
   cmd_vuthers = ->
     roomInfo (data) ->
@@ -702,11 +823,11 @@ busDriver = (options) ->
         djSongCount[dj] = count
         
         # Set camping if over
-        if count >= DJ_MAX_SONGS and dj not of campingDjs
+        if count >= get_config('max_songs') and dj not of campingDjs
           campingDjs[dj] = 0
         
         # Remove camping if under
-        if count < DJ_MAX_SONGS and dj of campingDjs
+        if count < get_config('max_songs') and dj of campingDjs
           delete campingDjs[dj]
   
   cmd_resetdj = (user, args) ->
@@ -804,42 +925,28 @@ busDriver = (options) ->
         bot.speak "Who?"
   
   cmd_night = ->
-    night = true
-    bot.speak "It's late at night! DJs wait #{DJ_WAIT_SONGS_NIGHT} songs"
+    set_config('wait_songs', get_config('wait_songs_night'))
+    
+    bot.speak "It's late at night! DJs wait #{get_config('wait_songs')} songs"
     
     for dj, count of djWaitCount
-      if count > DJ_WAIT_SONGS_NIGHT
+      if count > get_config('wait_songs')
         delete djWaitCount[dj]
   
   cmd_day = ->
-    night = false
-    bot.speak "It's bumping in here! DJs wait #{DJ_WAIT_SONGS} songs"
+    set_config('wait_songs', get_config('wait_songs_day'))
+    
+    bot.speak "It's bumping in here! DJs wait #{get_config('wait_songs')} songs"
   
   cmd_stagedive = (user) ->
     if user.userid of djSongCount
       bot.remDj(user.userid)
       bot.speak "#{user.name}, go crowd surfing!"
-  
-  cmd_mode = (user, args) ->
-    args = args.toLowerCase().trim()
+      
+  cmd_boost = (user, args) ->
+    boost = true
     
-    if args is "vips" or args is "vip"
-      room_mode = VIP_MODE
-      bot.speak "It's a VIP party in here! VIPs (and mods) only on deck!"
-    else if args is "battle"
-      room_mode = BATTLE_MODE
-      bot.speak "Ready to BATTLE?!!!"
-    else if args is "normal"
-      room_mode = NORMAL_MODE
-      bot.speak "Back to the ho-hum. FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} wait time between sets"
-  
-  cmd_setrules = (user, args) ->
-    args = args.trim()
-    
-    if args isnt ""
-      rules_link = args.trim()
-    else
-      rules_link = DEFAULT_RULES
+    bot.speak "VIPs and allowed DJs, get up on deck!"
   
   command = (line) ->
     cmd_pat = /^([^\s]+?)(\s+([^\s]+.+?))?\s*$/
@@ -853,114 +960,38 @@ busDriver = (options) ->
     
     [cmd, args]
   
-  cmd_lamers = ->
-    roomInfo (data) ->
-      # Processes the votelog automatically
-      count = _.keys(lamers).length
-      
-      if count > 0
-        lamer_list = (roomUsers[uid].name for uid in _.keys(lamers)).join(", ")
-        bot.speak "#{lamer_list}, killing the mood, man..."
-      else if downVotes > 0
-        bot.speak "There's a lamer here, but I can't figure out who"
-      else
-        bot.speak "All party all the time! We're rocking it!"
-  
-  prop_camping = (args) ->
-  
-  prop_rules = (args) ->  
-    if args is ""
-      bot.speak "Current rules link is #{rules_link}"
-    else
-      if args is "default"
-        rules_link = DEFAULT_RULES
-      else
-        rules_link = args.trim()
-  
-  prop_max_songs = (args) ->
-    if args is ""
-      bot.speak "Current DJ song limit is #{DJ_MAX_SONGS}"
-    else
-      songs = parseInt(args)
-      
-      if songs and songs > 0
-        DJ_MAX_SONGS = songs
+  cmd_set = (user, args, out) ->
+    [x, value] = command(args)
     
-  prop_wait_songs = (args) ->
-    if args is ""
-      bot.speak "Current DJ naughty corner time is #{DJ_WAIT_SONGS} songs"
-    else
-      songs = parseInt(args)
-      
-      if songs and songs > 0
-        DJ_WAIT_SONGS = songs
-    
-  prop_wait_time = (args) ->
-    if args is ""
-      mins = Math.floor(DJ_WAIT_TIME / MINUTE)
-      bot.speak "Current DJ wait time is #{mins} minutes"
-    else
-      mins = parseInt(args)
-      
-      if mins and mins > 0
-        DJ_WAIT_TIME = mins * MINUTE
-    
-  prop_wait_mode = (args) ->
-  prop_camp_songs = (args) ->
-    if args is ""
-      bot.speak "Current camping autoescort limit is #{DJ_MAX_PLUS_SONGS} songs"
-    else
-      songs = parseInt(args)
-      
-      if songs and songs > 0
-        DJ_MAX_PLUS_SONGS = songs
+    set_config(x, value)
   
-  prop_mode = (args) ->
-    args = args.toLowerCase().trim()
+  cmd_get = (user, args, out) ->
+    [x] = command(args)
     
-    if args is "vips" or args is "vip"
-      room_mode = VIP_MODE
-      bot.speak "It's a VIP party in here! VIPs (and mods) only on deck!"
-    else if args is "battle"
-      room_mode = BATTLE_MODE
-      bot.speak "Ready to BATTLE?!!!"
-    else if args is "normal"
-      room_mode = NORMAL_MODE
-      bot.speak "Back to the ho-hum. FFA, #{DJ_MAX_SONGS} song limit, #{DJ_WAIT_SONGS} wait time between sets"
-  
-  props =
-    "rules": prop_rules
-    "max_songs": prop_max_songs
-    "wait_songs": prop_wait_songs
-    "wait_time": prop_wait_time
-    "camp_songs": prop_camping
-    "wait_mode": prop_wait_mode
-    "mode": prop_mode
-  
-  cmd_set = (user, args) ->
-    [prop, prop_args] = command(args)
+    if x? and x of config_props
+      props = config_props[x]
     
-    if prop
-      prop = norm(prop)
-      prop_args = prop_args.trim()
+      result = config[x] ? props.default
       
-      if prop of props
-        props[prop](prop_args)
+      result = if props.format? and (pretty = config_format[props.format]?.pretty)? then pretty(result, props.unit) else result
+      
+      out "Current #{props.name} is #{result}"
   
   # TODO, match regexes, and have a hidden, so commands automatically lists
   commands = [
+    {cmd: "/allowed", fn: cmd_allowed, help: "allowed djs"}
     {cmd: "/commands", fn: cmd_commands, hidden: true, help: "get list of commands"}
     {cmd: "/dance", fn: cmd_dance, help: "dance!"}
     {cmd: "/daps", fn: cmd_daps, help: "daps"}
     {cmd: "/djs", fn: cmd_throttled_djs, help: "dj song count"}
     {cmd: ["/help", "/rules", "/?"], name: "/help", fn: cmd_help, help: "get help"}
     {cmd: ["/last", "/prev", "/last_song", "/prev_song"], name: "/last", fn: cmd_last_song, help: "votes for the last song"}
-    {cmd: "/lamers", fn: cmd_lamers, help: "who is that lamer"}
     {cmd: "/mods", fn: cmd_mods, help: "lists room mods"}
     {cmd: "/party", fn: cmd_party, help: "party!"}
     {cmd: "/power", fn: cmd_power, help: "checks the power level of a user using the scouter"}
     {cmd: ["q", "/q", "/queue", "q?"], name: "/queue", fn: cmd_queue, hidden: true, help: "get dj queue info"}
     {cmd: "q+", fn: cmd_queue_add, hidden: true, help: "add to dj queue"}
+    {cmd: "/ragequit", fn: cmd_ragequit, help: "ragequit"}
     {cmd: ["/timeout", "/wait", "/waiting", "/waitlist"], name: "/timeout", fn: cmd_waiting, help: "dj timeout list"}
     {cmd: "/users", fn: cmd_users, help: "counts room users"}
     {cmd: "/stagedive", fn: cmd_stagedive, help: "stage dive!"}
@@ -968,10 +999,12 @@ busDriver = (options) ->
     # {cmd: "/vuthers", fn: cmd_vuthers, help: "vuther clan roll call"}
     
     # Mod commands
+    {cmd: "/allow", fn: cmd_allow, owner: true, help: "allow a dj"}
+    {cmd: "/unallow", fn: cmd_unallow, owner: true, help: "unallow a dj"}
+    {cmd: "/boost", fn: cmd_boost, mod: true, help: "allow a dj up"}
     {cmd: "/chinesefiredrill", fn: cmd_chinesefiredrill, owner: true, help: "boot everybody off stage. Must type THIS IS ONLY A DRILL :D"}
-    {cmd: "/mode", fn: cmd_mode, owner: true, help: "change room mode: vips, battle, normal"}
-    {cmd: "/set", fn: cmd_set, owner: true, help: "set various variables"}
-    {cmd: "/setrules", fn: cmd_setrules, owner: true, help: "set room rules text"}
+    {cmd: "/set", fn: cmd_set, owner: true, help: "set bot configuration variables"}
+    {cmd: "/get", fn: cmd_get, owner: true, help: "get bot configuration variables"}
     {cmd: "/vip", fn: cmd_vip, owner: true, help: "make user a vip (no limit)"}
     {cmd: "/unvip", fn: cmd_unvip, owner: true, help: "remove vip status"}
     {cmd: "/setsongs", fn: cmd_setsongs, owner: true, help: "set song count"}
@@ -989,10 +1022,10 @@ busDriver = (options) ->
   
   busDriver.commands = commands
   
-  cmd_allowed = (user, cmd) ->
+  allowed_cmd = (user, cmd) ->
     is_owner(user.userid) or (not cmd.owner and (is_mod(user.userid) or not cmd.mod))
   
-  cmd_logged = (cmd) ->
+  logged_cmd = (cmd) ->
     cmd.owner or cmd.mod
   
   cmd_debug = (user, args) ->
@@ -1080,9 +1113,15 @@ busDriver = (options) ->
     
     resolved_cmd = _.find(commands, cmd_matches(cmd_txt))
     
-    if resolved_cmd and cmd_allowed(user, resolved_cmd)
-      if cmd_logged(resolved_cmd)
+    if resolved_cmd and allowed_cmd(user, resolved_cmd)
+      if logged_cmd(resolved_cmd)
         util.puts "MOD #{now().toTimeString()}: #{data.name}: #{data.text}"
+        db.collection 'commands', (err, col)->
+          col.insert
+            user: user
+            cmd: cmd_txt
+            args: args
+            when: new Date()
       resolved_cmd.fn(user, args, (txt) -> bot.speak(txt))
     
     if chat_enabled
