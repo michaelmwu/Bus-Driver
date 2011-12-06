@@ -15,6 +15,8 @@ MINUTE = 60*SECOND
 HOUR = 60 * MINUTE
 DAY = 24 * HOUR
 WEEK = 7 * DAY
+MONTH = 30 * DAY
+YEAR = 365.25 * DAY
 
 class BusDriver
   ###
@@ -177,6 +179,62 @@ class BusDriver
     arg = norm(arg)
     
     arg = arg is "true" or arg is "on" or arg is "yes"
+  
+  to_time = (arg, _unit = "s") =>
+    time_pat = /^\s*(\d+|\d+\.\d*|\d*\.\d+)\s*([^\s]+)?\s*$/
+    
+    if match = time_pat.exec(line)
+      number = parseFloat(match[1])
+      unit = match[2]
+      
+      if not unit? or _unit is ""
+        unit = _unit
+      
+      if unit.indexOf("s") is 0
+        number * SECOND
+      else if unit.indexOf("ms") is 0 or unit.indexOf("mil") is 0
+        number
+      else if unit.indexOf("h") is 0
+        number * HOUR
+      else if unit.indexOf("d") is 0
+        number * DAY
+      else if unit.indexOf("w") is 0
+        number * WEEK
+      else if unit.indexOf("mo") is 0
+        number * MONTH
+      else if unit.indexOf("y") is 0
+        number * YEAR
+      else if unit.indexOf("m") is 0
+        number * MINUTE
+  
+  time_units = [
+    {name: "year", size: YEAR}
+    {name: "month", size: MONTH}
+    {name: "week", size: WEEK}
+    {name: "day", size: DAY}
+    {name: "hour", size: HOUR}
+    {name: "minute", size: MINUTE}
+    {name: "second", size: SECOND}
+  ]
+  
+  to_pretty_time = (time) =>
+    unit = _.first(_.range(0, time_units.length), (i) -> arg > time_units[i].size)
+    
+    if unit?
+      first = Math.floor(time / time_units[unit].size)
+      str = "#{first} #{time_units[unit].name}#{plural(first)}"
+      
+      if unit < time_units.length - 1
+        second = Math.floor(time / time_units[unit + 1].size)
+        
+        if second > 0
+          str += " "#{second} #{time_units[unit + 1].name}#{plural(second)}""
+      
+      str
+    else
+      num = time / 1000
+      
+      "{num} second#{plural(num)}"
   
   to_room_mode: (arg) =>
     arg = norm(arg)
@@ -494,6 +552,7 @@ class BusDriver
       escort_interval: {default: 20, unit: "second", format: "+int", name: "Window to boot if escorted too many times"}
       escort_limit: {default: 3, unit: "time", format: "+int", name: "Too many escorts limit"}
       cmd_djs_throttle_time: {default: 30, unit: "second", format: "+int", name: "/djs command throttle time"}
+      djs_resume_count_interval: {default: 20, unit: "minutes", format: "+int", name: "interval to resume song count"}
       mode: {default: NORMAL_MODE, format: "room_mode", name: "Room mode", set: ((value) => @room_mode = value), get: => @room_mode}
       debug: {default: off, format: "onoff", name: "Command line debug", set: ((value) => debug_on = value), get: => debug_on}
       rules_link: {default: "http://bit.ly/thepartybus", name: "Rules link"}
@@ -582,6 +641,87 @@ class BusDriver
       
       # Save DJ
       @lastDj = @currentDj
+      
+    # Time if a dj rejoins, to resume their song count. Set to about three songs as default (20 minutes). Also gets reset by waiting, whichever comes first.
+    DJ_REUP_TIME = 20 * 60 * 1000
+
+    @bot.on "add_dj", (data) =>
+      user = data.user[0]
+      @update_name(user.name, user.userid)
+      uid = user.userid
+      @update_idle(uid)
+      
+      if @boost
+        if not (uid of @vips or uid of @allowed or @is_mod(uid) or @is_owner(uid)) and @selfModerator
+          # Escort off stage
+          @ensure_escort(uid)
+          
+          @bot.speak "Hey #{user.name}, back of the bus for you! We're letting a VIP up on stage right now!"
+        else if (uid of @vips or uid of @allowed)
+          @boost = off
+      else
+        if @room_mode is NORMAL_MODE
+          if @limits_enabled and _.keys(@djSongCount).length >= @get_config('moderate_dj_min')
+            if uid of @djWaitCount and uid not of @vips and @djWaitCount[uid] <= @get_config('wait_songs')
+              waitSongs = @get_config('wait_songs') - @djWaitCount[uid]
+              @bot.speak "#{user.name}, party foul! Wait #{waitSongs} more song#{plural(waitSongs)} before getting on the decks again!"
+              
+              if @selfModerator
+                # Escort off stage
+                @ensure_escort(uid)
+        else if @room_mode is VIP_MODE
+          if not (uid of @vips or @is_mod(uid) or @is_owner(uid))
+            if @selfModerator
+              # Escort off stage
+              @ensure_escort(uid)
+            @bot.speak "#{user.name}, it's VIPs only on deck right now!"
+    #    else if @room_mode is BATTLE_MODE
+        
+      # Resume song count if DJ rejoined too quickly
+      if uid of @pastDjSongCount and elapseed(@pastDjSongCount[uid].when) < @get_config('djs_resume_count_interval') * MINUTE
+        @djSongCount[uid] = @pastDjSongCount[uid].count
+      else
+        @djSongCount[uid] = 0
+      
+      @db_col 'djs', (col)=>
+        criteria =
+          'userInfo.userid': uid
+        modifications =
+          '$set':
+            'userInfo': user
+            'onstage': true
+            'left': now()
+            'count': @djSongCount[uid]
+        col.update criteria, modifications, {upsert: true}
+
+    @bot.on "rem_dj", (data) =>
+      user = data.user[0]
+      uid = user.userid
+      
+      @db_col 'djs', (col)=>
+        criteria =
+          'userInfo.userid': uid
+        modifications =
+          '$set':
+            'userInfo': user
+            'onstage': false
+            'left': now()
+        col.update criteria, modifications, {upsert: true}
+      
+      # Add to timeout list if DJ has played 
+      if @limits_enabled and @djSongCount[uid] >= @get_config('max_songs') and not @djWaitCount[uid]
+        # I believe the new song message is triggered first. Could ignore the message if it is too soon
+        @djWaitCount[uid] = 0
+        
+      # TODO consider lineskipping
+      @pastDjSongCount[uid] = { count: @djSongCount[uid], when: new Date() }
+      delete @djSongCount[uid]
+      delete @campingDjs[uid]
+      delete @warnedDjs[uid]
+    
+    @bot.on "snagged", (data) =>
+      @debug "Heart: #{@roomUsers[data.userid].name} to #{@currentDj.name}"
+      @track_action("hearts", @roomUsers[data.userid], @currentDj)
     
     greetings = greet.greetings  
     
@@ -707,75 +847,6 @@ class BusDriver
           @selfModerator = false
         else
           delete @mods[data.userid]
-    
-    # Time if a dj rejoins, to resume their song count. Set to about three songs as default (20 minutes). Also gets reset by waiting, whichever comes first.
-    DJ_REUP_TIME = 20 * 60 * 1000
-
-    @bot.on "add_dj", (data) =>
-      user = data.user[0]
-      @update_name(user.name, user.userid)
-      uid = user.userid
-      @update_idle(uid)
-      
-      if @boost
-        if not (uid of @vips or uid of @allowed or @is_mod(uid) or @is_owner(uid)) and @selfModerator
-          # Escort off stage
-          @ensure_escort(uid)
-          
-          @bot.speak "Hey #{user.name}, back of the bus for you! We're letting a VIP up on stage right now!"
-        else if (uid of @vips or uid of @allowed)
-          @boost = off
-      else
-        if @room_mode is NORMAL_MODE
-          if @limits_enabled and _.keys(@djSongCount).length >= @get_config('moderate_dj_min')
-            if uid of @djWaitCount and uid not of @vips and @djWaitCount[uid] <= @get_config('wait_songs')
-              waitSongs = @get_config('wait_songs') - @djWaitCount[uid]
-              @bot.speak "#{user.name}, party foul! Wait #{waitSongs} more song#{plural(waitSongs)} before getting on the decks again!"
-              
-              if @selfModerator
-                # Escort off stage
-                @ensure_escort(uid)
-        else if @room_mode is VIP_MODE
-          if not (uid of @vips or @is_mod(uid) or @is_owner(uid))
-            if @selfModerator
-              # Escort off stage
-              @ensure_escort(uid)
-            @bot.speak "#{user.name}, it's VIPs only on deck right now!"
-    #    else if @room_mode is BATTLE_MODE
-        
-      # Resume song count if DJ rejoined too quickly
-      if uid of @pastDjSongCount and now().getTime() - @pastDjSongCount[uid].when.getTime() < DJ_REUP_TIME
-        @djSongCount[uid] = @pastDjSongCount[uid].count
-      else
-        @djSongCount[uid] = 0
-
-    @bot.on "rem_dj", (data) =>
-      user = data.user[0]
-      uid = user.userid
-      
-      @db_col 'djs', (col)=>
-        criteria =
-          'userInfo.userid': uid
-        modifications =
-          '$set':
-            'userInfo': user
-            'onstage': false
-        col.update criteria, modifications, {upsert: true}
-      
-      # Add to timeout list if DJ has played 
-      if @limits_enabled and @djSongCount[uid] >= @get_config('max_songs') and not @djWaitCount[uid]
-        # I believe the new song message is triggered first. Could ignore the message if it is too soon
-        @djWaitCount[uid] = 0
-        
-      # TODO consider lineskipping
-      @pastDjSongCount[uid] = { count: @djSongCount[uid], when: new Date() }
-      delete @djSongCount[uid]
-      delete @campingDjs[uid]
-      delete @warnedDjs[uid]
-    
-    @bot.on "snagged", (data) =>
-      @debug "Heart: #{@roomUsers[data.userid].name} to #{@currentDj.name}"
-      @track_action("hearts", @roomUsers[data.userid], @currentDj)
     
     rl = readline.createInterface(process.stdin, process.stdout)
         
@@ -992,6 +1063,8 @@ class BusDriver
     @roomInfo (data) =>
       if @album isnt ""
         @bot.speak "Song album: #{@album}"
+      else
+        @bot.speak "What album?"
   
   cmd_boot: (issuer, args) =>
     if @selfModerator
