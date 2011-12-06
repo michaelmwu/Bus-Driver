@@ -1351,7 +1351,7 @@ class BusDriver
         out (txt + ("#{@roomUsers[dj].name}: #{count}" for dj, count of @djSongCount).join(", "))
 
   cmd_waiting: =>
-    if _.keys(djWaitCount).length == 0
+    if _.keys(@djWaitCount).length == 0
       @bot.speak "No DJs are in the naughty corner!"
     else
       waiting_list = ("#{@roomUsers[dj].name}: #{@get_config('wait_songs') - count}" for dj, count of @djWaitCount).join(", ") + " songs"
