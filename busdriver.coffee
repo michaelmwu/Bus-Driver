@@ -613,8 +613,10 @@ class BusDriver
         col.update criteria, modifications, {upsert: true}
 
       if @room_mode is NORMAL_MODE
+        util.puts "NORMAL MODE"
         # Only mod if there are some minimum amount of DJs
         if @limits_enabled and _.keys(@djSongCount).length >= @get_config('moderate_dj_min')
+          util.puts "LIMITS ENABLED, ENOUGH DJS"
           escorted = {}
           
           # Escort DJs that haven't gotten off!
@@ -626,7 +628,7 @@ class BusDriver
               @ensure_escort(dj)
               escorted[dj] = true
           
-          if @lastDj? and @lastDj.userid not of escorted and @lastDj.userid not of @vips and @djSongCount[@lastDj.user] >= @get_config('max_songs')
+          if @lastDj? and @lastDj.userid not of escorted and @lastDj.userid not of @vips and @djSongCount[@lastDj.userid] >= @get_config('max_songs')
             @bot.speak "#{@lastDj.name}, you've played #{@djSongCount[@lastDj.userid]} songs already! Let somebody else get on the decks!"
             
             if @lastDj.userid not of @campingDjs
@@ -643,9 +645,6 @@ class BusDriver
       
       # Save DJ
       @lastDj = @currentDj
-      
-    # Time if a dj rejoins, to resume their song count. Set to about three songs as default (20 minutes). Also gets reset by waiting, whichever comes first.
-    DJ_REUP_TIME = 20 * 60 * 1000
 
     @bot.on "add_dj", (data) =>
       user = data.user[0]
