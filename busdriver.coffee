@@ -29,6 +29,8 @@ class BusDriver
   ###
   General utility functions
   ###
+  is_number = (num) -> num? and not isNaN(num)
+  
   plural = (count) =>
     if count isnt 1
       's'
@@ -342,8 +344,8 @@ class BusDriver
         if doc isnt null
           if doc.action of @actions
             @actions[doc.action][doc.userInfo.userid] =
-              given: doc.given
-              received: doc.received
+              given: if is_number(doc.given) then doc.given else 0
+              received: if is_number(doc.received) then doc.received else 0
   
   db_init_config: (col) =>
     criteria =
@@ -678,7 +680,7 @@ class BusDriver
     #    else if @room_mode is BATTLE_MODE
         
       # Resume song count if DJ rejoined too quickly
-      if uid of @pastDjSongCount and elapseed(@pastDjSongCount[uid].when) < @get_config('djs_resume_count_interval') * MINUTE
+      if uid of @pastDjSongCount and elapsed(@pastDjSongCount[uid].when) < @get_config('djs_resume_count_interval') * MINUTE
         @djSongCount[uid] = @pastDjSongCount[uid].count
       else
         @djSongCount[uid] = 0
