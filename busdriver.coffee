@@ -115,13 +115,6 @@ class BusDriver
     @update_user(user)
     @active[user.userid] = true
     @update_idle(user.userid)
-    
-    @db_col 'login', (col) =>
-      record =
-        'userInfo': user
-        'when': now()
-        'songs': @djSongCount[@currentDj.userid]
-      col.insert record
   
   get_by_name: (name) =>
     name = norm(name)
@@ -169,9 +162,33 @@ class BusDriver
     
     setTimeout delay, 500
   
+  capacity_boot: =>
+    if @userCount > @get_config('room_capacity')
+      @roomInfo (data) =>
+        num_boot = @userCount - @get_config('room_capacity')
+
+        idlers = _.filter(_.keys(@active), (uid) => uid of @lastActivity and elapsed(@lastActivity[uid]) > @get_config('capacity_min_idle')*MINUTE and not @uid_is_dj(uid) and not @is_mod(uid) and not @is_owner(uid) and uid isnt @userId and not @is_vip(uid))
+        top_idlers = _.last(_.sortBy(idlers, (uid) => elapsed(@lastActivity[uid])), num_boot)
+        
+        if @get_config('fake_idle_boot')
+          if top_idlers.length > 0
+            util.puts "idle booting: " + [@roomUsers[uid].name for uid in top_idlers].join(", ")
+        else
+          for uid in top_idlers
+            bot.bootUser(uid, "Vote or chat to stay in the room!")
+  
   ###
   Configuration
   ###
+  to_ranged_int = (options) =>
+    to_range = (arg) =>
+      result = parseInt(arg)
+      
+      if not isNaN(result) and (not options.min? or result >= options.min) and (not options.max? or result <= options.max)
+        return result
+    
+    to_range
+  
   to_positive_int = (arg) =>
     result = parseInt(arg)
     
@@ -313,6 +330,7 @@ class BusDriver
   
   roomInfo: (callback) =>
     @bot.roomInfo (data) =>
+      @userCount = _.keys(data.users).length
       @currentDj = if data.room.metadata.current_dj? then @roomUsers[data.room.metadata.current_dj]
     
       # Initialize song
@@ -428,6 +446,7 @@ class BusDriver
     @roomUsernames = {}
     @active = {}
     @roomUsersLeft = {}
+    @userCount = 1
     
     @lastActivity = {}
     
@@ -493,15 +512,18 @@ class BusDriver
     @collections =
       actions:
         init: @db_init_actions
-      'chat': {}
-      'commands': {}
+      'chat':
+        foo: "hello"
+      'commands':
+        foo: "hello"
       'djs':
         init: @db_init_djs
       'rooms':
         init: @db_init_config
       'users':
         init: @db_init_users
-      'login': {}
+      'login':
+        foo: "hello"
     
     for name, props of @collections
       props.queue = []
@@ -509,33 +531,33 @@ class BusDriver
     db_connection = new mongodb.Db 'TheBusDriver', (new mongodb.Server '127.0.0.1', 27017, {})
     db_connection.open (err, db) =>
       if err
-        util.puts "DB connection error: #{err}"
+        @debug "DB connection error: #{err}"
       else
         @db = db
         @db_ready = true
         @debug "DB Connection Ready"
         
         for name, props of @collections
-          if props.init?
-            @db.collection name, (err, col) =>
-              if err
-                util.puts "DB collection #{name} error: #{err}"
-              else
-                @debug "DB collection #{name}"
+          @db.collection name, (err, col) =>
+            if err
+              @debug "DB collection #{name} error: #{err}"
+            else
+              @debug "DB collection #{name}"
+            
+              # Run initializer
+              if props.init?
+                @debug "Running initializer for collection #{name}"
+                props.init(col)
               
-                # Run initializer
-                if props.init?
-                  @debug "Running initializer for collection #{name}"
-                  props.init(col)
-                
-                # Run queued up actions
-                for action in props.queue
-                  action(col)
-                
-                # Clear out queue
-                props.queue = []
-                
-                props.ready = true
+              # Run queued up actions
+              for action in props.queue
+                action(col)
+              
+              # Clear out queue
+              props.queue = []
+              
+              @debug "DB Collection #{name} ready!"
+              props.ready = true
 
     options.ircHandle = options.ircHandle or "BusDriver"
     
@@ -568,11 +590,17 @@ class BusDriver
       debug: {default: off, format: "onoff", name: "Command line debug", set: ((value) => debug_on = value), get: => debug_on}
       rules_link: {default: "http://bit.ly/thepartybus", name: "Rules link"}
       greetings: {default: true, format: "onoff", name: "Greetings"}
-      greetings_max_capacity: {default: 150, unit: "user", format: "+int", name: "Number of users to disable greetings at"}
+      greetings_max_capacity: {default: 100, unit: "user", format: "+int", name: "Number of users to disable greetings at"}
       capacity_boot: {default: true, format: "onoff", name: "Boot at capacity"}
+      fake_idle_boot: {default: false, format: "onoff", name: "Fake boot at capacity"}
+      room_capacity: {default: 199, format: "room_cap", unit: "user", name: "Number to limit capacity to"}
+      capacity_min_idle: {default: 10, format: "+int", unit: "minute", name: "Minimum idle time to capacity boot"}
+      chat_spam: {default: true, format: "onoff", name: "Turn on/off all chat spam commands"}
+      
       
     @config_format =
       "+int": {to: to_positive_int, pretty: pretty_int}
+      "room_cap": {to: to_ranged_int({min: 195, max: 200}), pretty: pretty_int}
       "onoff": {to: to_bool, pretty: (value) => if value then "on" else "off"}
       "room_mode": {to: @to_room_mode, pretty: @pretty_room_mode}
             
@@ -758,10 +786,12 @@ class BusDriver
             @bot.speak "#{@roomUsers[uid].name}, no falling asleep on deck!"
             @warnedDjs[uid] = true
           if idle > @get_config('dj_escort_time') * MINUTE
-            if uid isnt @currentDj?.userid
+            if uid isnt @currentDj?.userid and not @is_vip(uid) and not @is_mod(uid) and not @is_owner(uid)
               @ensure_escort(uid)
         else
           @lastActivity[uid] = now()
+      
+      @capacity_boot()
     
     setInterval heartbeat, 1000
         
@@ -790,6 +820,15 @@ class BusDriver
       _.map(data.user, @register)
 
       user = data.user[0]
+      @userCount += 1
+      @capacity_boot()
+      
+      @db_col 'login', (col) =>
+        record =
+          'userInfo': user
+          'when': now()
+        col.insert record
+        @debug "Logging #{user.name} registering"
       
       if user.userid of @permabanned
         if @selfModerator
@@ -802,26 +841,32 @@ class BusDriver
       if _.keys(@active).length <= @get_config('greetings_max_capacity') and @get_config('greetings') and user.userid isnt @userId and (not @roomUsersLeft[user.userid] or elapsed(@roomUsersLeft[user.userid]) > @get_config('rejoin_greeting_interval') * SECOND)
         if greeting = get_greeting(user)
           delay = =>
-            @bot.speak greeting
+            if user.userid of @active
+              @bot.speak greeting
           
           setTimeout delay, @get_config('special_greeting_delay') * SECOND
         else if user.userid of @vips
           delay = =>
-            @bot.speak "Welcome #{user.name}, we have a VIP aboard the PARTY BUS!"
+            if user.userid of @active
+              @bot.speak "Welcome #{user.name}, we have a VIP aboard the PARTY BUS!"
 
           setTimeout delay, @get_config('special_greeting_delay') * SECOND
         else if user.acl > 0
           delay = =>
-            @bot.speak "We have a superuser in the HOUSE! #{user.name}, welcome aboard the PARTY BUS!"
+            if user.userid of @active
+              @bot.speak "We have a superuser in the HOUSE! #{user.name}, welcome aboard the PARTY BUS!"
 
           setTimeout delay, @get_config('special_greeting_delay') * SECOND
         else
-          @joinedUsers[user.name] = user
+          @joinedUsers[user.userid] = user
           
           delay = ()=>
-            users_text = (name for name in _.keys(@joinedUsers)).join(", ")
+            greet_users = _.filter(@joinedUsers, (user) => user.userid of @active)
             
-            @bot.speak "Hello #{users_text}, welcome aboard the PARTY BUS!"
+            if greet_users.length > 0
+              users_text = (user.name for user in greet_users).join(", ")
+              
+              @bot.speak "Hello #{users_text}, welcome aboard the PARTY BUS!"
             
             @joinedUsers = {}
             @greetingTimeout = null
@@ -840,6 +885,7 @@ class BusDriver
     
     @bot.on "deregistered", (data) =>
       user = data.user[0]
+      @userCount -= 1
       delete @active[user.userid]
       @roomUsersLeft[user.userid] = new Date()
     
@@ -908,18 +954,18 @@ class BusDriver
     @commands = [
       {cmd: "/allowed", fn: @cmd_allowed, help: "allowed djs"}
       {cmd: "/album", fn: @cmd_album, help: "current song album"}
-      {cmd: "/ball", name: "/ball so hard", fn: @cmd_ballsohard, help: "ball so hard"}
+      {cmd: "/ball", name: "/ball so hard", fn: @cmd_ballsohard, spam: true, help: "ball so hard"}
       {cmd: "/commands", fn: @cmd_commands, hidden: true, help: "get list of commands"}
       {cmd: "/dance", fn: @cmd_dance, help: "dance!"}
-      {cmd: "/daps", fn: @cmd_daps, help: "daps"}
+      {cmd: "/daps", fn: @cmd_daps, spam: true, help: "daps"}
       {cmd: "/djs", fn: @cmd_throttled_djs, help: "dj song count"}
-      {cmd: "/hearts", fn: @cmd_hearts, help: "get hearts count"}
-      {cmd: "/hugs", fn: @cmd_hugs, help: "get hugs count"}
+      {cmd: "/hearts", fn: @cmd_hearts, spam: true, help: "get hearts count"}
+      {cmd: "/hugs", fn: @cmd_hugs, spam: true, help: "get hugs count"}
       {cmd: ["/help", "/rules", "/?"], name: "/help", fn: @cmd_help, help: "get help"}
       {cmd: ["/last", "/prev", "/last_song", "/prev_song"], name: "/last", fn: @cmd_last_song, help: "votes for the last song"}
       {cmd: "/mods", fn: @cmd_mods, help: "lists room mods"}
-      {cmd: "/party", fn: @cmd_party, help: "party!"}
-      {cmd: "/power", fn: @cmd_power, help: "checks the power level of a user using the scouter"}
+      {cmd: "/party", fn: @cmd_party, spam: true, help: "party!"}
+      {cmd: "/power", fn: @cmd_power, spam: true, help: "checks the power level of a user using the scouter"}
       {cmd: ["q", "/q", "/queue", "q?", "list"], name: "/queue", fn: @cmd_queue, hidden: true, help: "get dj queue info"}
       {cmd: "q+", fn: @cmd_queue_add, hidden: true, help: "add to dj queue"}
       {cmd: "/ragequit", fn: @cmd_ragequit, help: "ragequit"}
@@ -927,8 +973,8 @@ class BusDriver
       {cmd: "/users", fn: @cmd_users, help: "counts room users"}
       {cmd: "/stagedive", fn: @cmd_stagedive, help: "stage dive!"}
       {cmd: "/vips", fn: @cmd_vips, help: "list vips in the bus"}
-      {cmd: "/vuthers", fn: @cmd_vuthers, help: "vuther clan roll call"}
-      {cmd: "/d-_-bs", fn: @cmd_dbs, help: "d-_-b's roll call"}
+      {cmd: "/vuthers", fn: @cmd_vuthers, spam: true, help: "vuther clan roll call"}
+      {cmd: "/d-_-bs", fn: @cmd_dbs, spam: true, help: "d-_-b's roll call"}
       
       # Mod commands
       {cmd: "/allow", fn: @cmd_allow, owner: true, help: "allow a dj"}
@@ -1237,14 +1283,16 @@ class BusDriver
   
   cmd_ballsohard: (issuer, args) =>
     if norm(args) is "so hard"
-      @bot.speak "Muhfuckas wanna fine me!"
+      if @get_config('chat_spam')
+        @bot.speak "Muhfuckas wanna fine me!"
       @bot.vote "up"
   
   cmd_party: (issuer, args) =>
-    if norm(args) is "on wayne"
-      @bot.speak "Party on Garth!"
-    else
-      @bot.speak "AWWWWWW YEAHHHHHHH!"
+    if @get_config('chat_spam')
+      if norm(args) is "on wayne"
+        @bot.speak "Party on Garth!"
+      else
+        @bot.speak "AWWWWWW YEAHHHHHHH!"
     
     @bot.vote "up"
   
@@ -1256,7 +1304,8 @@ class BusDriver
     ]
   
   cmd_dance: => 
-    @bot.speak random_select(dances)
+    if @get_config('chat_spam')
+      @bot.speak random_select(dances)
     @bot.vote "up"
 
   ###
@@ -1264,78 +1313,82 @@ class BusDriver
   ###
   
   cmd_daps: (issuer) =>
-    name = issuer.name
-    
-    if name is "marinating minds"
-      name = "SAUCEY"
-    
-    @bot.speak "DAPS #{name}"
+    if @get_config('chat_spam')
+      name = issuer.name
+      
+      if name is "marinating minds"
+        name = "SAUCEY"
+      
+      @bot.speak "DAPS #{name}"
 
   cmd_ragequit: (issuer) =>
-    @bot.speak "Lol umadbro?"
+    if @get_config('chat_spam')
+      @bot.speak "Lol umadbro?"
     @bot.bootUser(issuer.userid, "gtfo")
   
   cmd_vuthers: =>
-    @roomInfo (data) =>
-      vuther_pat = /\bv[aeiou]+\w*th[aeiou]\w*r/i
-      
-      daddy = false
-      
-      is_vutherbot = (name) =>
-        if name is "vuther"
-          daddy = true
-          return false
-        else
-          return vuther_pat.test(name)
-      
-      vuthers = _.select(data.users, (user) => is_vutherbot(user.name))
-      vuthers = _.map(vuthers, (user) => user.name)
-      
-      msg = "vuther force, assemble!"
-      
-      if vuthers.length > 0
-        msg += " There are #{vuthers.length} vuthers here: " + vuthers.join(", ") + "."
-      else
-        msg += " There are no vuthers here..."
-      
-      if daddy
+    if @get_config('chat_spam')
+      @roomInfo (data) =>
+        vuther_pat = /\bv[aeiou]+\w*th[aeiou]\w*r/i
+        
+        daddy = false
+        
+        is_vutherbot = (name) =>
+          if name is "vuther"
+            daddy = true
+            return false
+          else
+            return vuther_pat.test(name)
+        
+        vuthers = _.select(data.users, (user) => is_vutherbot(user.name))
+        vuthers = _.map(vuthers, (user) => user.name)
+        
+        msg = "vuther force, assemble!"
+        
         if vuthers.length > 0
-          msg += " And daddy vuther is here!"
+          msg += " There are #{vuthers.length} vuthers here: " + vuthers.join(", ") + "."
         else
-          msg += " But daddy vuther is here!"
-      
-      @bot.speak msg
+          msg += " There are no vuthers here..."
+        
+        if daddy
+          if vuthers.length > 0
+            msg += " And daddy vuther is here!"
+          else
+            msg += " But daddy vuther is here!"
+        
+        @bot.speak msg
   
   cmd_dbs: =>
-    @roomInfo (data) =>
-      db_pat =  /.*d.*?_.*?b.*/i
-      
-      daddy = false
-      
-      is_db = (name) =>
-        if name is "d-_-b"
-          daddy = true
-          return false
-        else
-          return db_pat.test(name)
-      
-      dbs = _.select(data.users, (user) => is_db(user.name))
-      dbs = _.map(dbs, (user) => user.name)
-      
-      msg = "d-_-b team, ASSEMBLEEEE!"
-      
-      if dbs.length > 0
-        msg += " There are #{dbs.length} soldier#{plural(dbs.length)} in the d-_-b army here: " + dbs.join(", ") + "."
-      else
-        msg += " There are no d-_-bs here..."
-      
-      if daddy
+    if @get_config('chat_spam')
+      @roomInfo (data) =>
+        db_pat =  /.*d.*?_.*?b.*/i
+        
+        daddy = false
+        
+        is_db = (name) =>
+          if name is "d-_-b"
+            daddy = true
+            return false
+          else
+            return db_pat.test(name)
+        
+        dbs = _.select(data.users, (user) => is_db(user.name))
+        dbs = _.map(dbs, (user) => user.name)
+        
+        msg = "d-_-b team, ASSEMBLEEEE!"
+        
         if dbs.length > 0
-          msg += " And d-_-b is here!"
+          msg += " There are #{dbs.length} soldier#{plural(dbs.length)} in the d-_-b army here: " + dbs.join(", ") + "."
         else
-          msg += " But d-_-b is here!"
-      
-      @bot.speak msg
+          msg += " There are no d-_-bs here..."
+        
+        if daddy
+          if dbs.length > 0
+            msg += " And d-_-b is here!"
+          else
+            msg += " But d-_-b is here!"
+        
+        @bot.speak msg
     
   ###
   DJ info commands
@@ -1368,13 +1421,14 @@ class BusDriver
       @bot.speak "DJ naughty corner: #{waiting_list}"
   
   cmd_queue: (issuer, args) =>
-    if @room_mode is VIP_MODE
-      @bot.speak "#{issuer.name}, the Party Bus has no queue! It's VIPs (and mods) only on deck right now!"
-    else if @room_mode is BATTLE_MODE
-      @bot.speak "#{issuer.name}, the Party Bus has no queue! It's a King of the Hill battle right now!"
-    else if @room_mode is NORMAL_MODE
-      if not @queueEnabled
-        @bot.speak "#{issuer.name}, the Party Bus has no queue! It's FFA, #{@get_config('max_songs')} song limit, #{@get_config('wait_songs')} song wait time"
+    if @get_config('chat_spam')
+      if @room_mode is VIP_MODE
+        @bot.speak "#{issuer.name}, the Party Bus has no queue! It's VIPs (and mods) only on deck right now!"
+      else if @room_mode is BATTLE_MODE
+        @bot.speak "#{issuer.name}, the Party Bus has no queue! It's a King of the Hill battle right now!"
+      else if @room_mode is NORMAL_MODE
+        if not @queueEnabled
+          @bot.speak "#{issuer.name}, the Party Bus has no queue! It's FFA, #{@get_config('max_songs')} song limit, #{@get_config('wait_songs')} song wait time"
   
   cmd_queue_add: (issuer, args) =>
     @cmd_queue(issuer, args)
@@ -1404,7 +1458,7 @@ class BusDriver
   
   cmd_commands: =>
     cmd_hidden = (cmd) =>
-      cmd.hidden or cmd.owner or cmd.mod
+      cmd.hidden or cmd.owner or cmd.mod or (not @get_config('chat_spam') and cmd.spam)
     
     cmds = _.select(@commands, (cmd) => not cmd_hidden(cmd))
     cmds_text = _.map(cmds, (entry) => entry.name or entry.cmd).join(", ")
@@ -1507,21 +1561,22 @@ class BusDriver
         delay_countdown(msg, it, 2)
   
   cmd_power: (issuer, args) =>
-    @roomInfo (data) =>
-      name = norm(args)
-      
-      if name isnt ""
-        # Initialize users
-        if user = _.find(data.users, (user) => norm(user.name) is norm(args))
-          power = Math.floor(user.points / 1000)
-          if power > 0
-            @bot.speak "Vegeta, what does the scouter say about #{user.name}'s power level? It's over #{power}000!!!"
+    if @get_config('chat_spam')
+      @roomInfo (data) =>
+        name = norm(args)
+        
+        if name isnt ""
+          # Initialize users
+          if user = _.find(data.users, (user) => norm(user.name) is norm(args))
+            power = Math.floor(user.points / 1000)
+            if power > 0
+              @bot.speak "Vegeta, what does the scouter say about #{user.name}'s power level? It's over #{power}000!!!"
+            else
+              @bot.speak "#{user.name} doesn't have much of a power level..."
           else
-            @bot.speak "#{user.name} doesn't have much of a power level..."
+            @bot.speak "The scouter couldn't find anyone named #{args}!"
         else
-          @bot.speak "The scouter couldn't find anyone named #{args}!"
-      else
-        @bot.speak "Who?"
+          @bot.speak "Who?"
   
   cmd_night: =>
     @set_config('wait_songs', @get_config('wait_songs_night'))
@@ -1546,7 +1601,8 @@ class BusDriver
     if norm(args) is "off"
       @boost = off
       
-      @bot.speak "No more rocket boost!"
+      if @get_config('chat_spam')
+        @bot.speak "No more rocket boost!"
     else
       @boost = on
       
@@ -1570,37 +1626,39 @@ class BusDriver
       out "#{props.name}: #{result}"
   
   cmd_hearts: (issuer, args) =>
-    if args is "given"
-      count = @actions["hearts"][issuer.userid]?.given ? 0
-      
-      if count == 0
-        @bot.speak "#{issuer.name} is incapable of love"
+    if @get_config('chat_spam')
+      if args is "given"
+        count = @actions["hearts"][issuer.userid]?.given ? 0
+        
+        if count == 0
+          @bot.speak "#{issuer.name} is incapable of love"
+        else
+          @bot.speak "You have given #{count} heart#{plural(count)}"
+      else if args is "top"
       else
-        @bot.speak "You have given #{count} heart#{plural(count)}"
-    else if args is "top"
-    else
-      count = @actions["hearts"][issuer.userid]?.received ? 0
-      
-      if count == 0
-        @bot.speak "#{issuer.name} is a heartless bastard"
-      else
-        @bot.speak "#{issuer.name}, you have #{count} heart#{plural(count)}"
+        count = @actions["hearts"][issuer.userid]?.received ? 0
+        
+        if count == 0
+          @bot.speak "#{issuer.name} is a heartless bastard"
+        else
+          @bot.speak "#{issuer.name}, you have #{count} heart#{plural(count)}"
   
   cmd_hugs: (issuer, args) =>
-    if args is "given"
-      count = @actions["hugs"][issuer.userid]?.given ? 0
-      
-      if count == 0
-        @bot.speak "#{issuer.name} is afraid of human intimacy"
+    if @get_config('chat_spam')
+      if args is "given"
+        count = @actions["hugs"][issuer.userid]?.given ? 0
+        
+        if count == 0
+          @bot.speak "#{issuer.name} is afraid of human intimacy"
+        else
+          @bot.speak "#{issuer.name}, you've given #{count} hug#{plural(count)}"
+      else if args is "top"
       else
-        @bot.speak "#{issuer.name}, you've given #{count} hug#{plural(count)}"
-    else if args is "top"
-    else
-      count = @actions["hugs"][issuer.userid]?.received ? 0
-      
-      if count == 0
-        @bot.speak "#{issuer.name}, you have no hug points and nobody loves you"
-      else
-        @bot.speak "You have #{count} hug point#{plural(count)} :)"
+        count = @actions["hugs"][issuer.userid]?.received ? 0
+        
+        if count == 0
+          @bot.speak "#{issuer.name}, you have no hug points and nobody loves you"
+        else
+          @bot.speak "You have #{count} hug point#{plural(count)} :)"
 
 exports.BusDriver = BusDriver
