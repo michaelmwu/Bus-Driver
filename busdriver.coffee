@@ -162,12 +162,16 @@ class BusDriver
     
     setTimeout delay, 500
   
+  is_ttdash: (name) =>
+    if @roomUsers[uid]?.name?
+      @roomUsers[uid].name.indexOf("ttdashboard_") is 0
+  
   capacity_boot: =>
     if @userCount > @get_config('room_capacity')
       @roomInfo (data) =>
         num_boot = @userCount - @get_config('room_capacity')
 
-        idlers = _.filter(_.keys(@active), (uid) => uid of @lastActivity and elapsed(@lastActivity[uid]) > @get_config('capacity_min_idle')*MINUTE and not @uid_is_dj(uid) and not @is_mod(uid) and not @is_owner(uid) and uid isnt @userId and not @is_vip(uid))
+        idlers = _.filter(_.keys(@active), (uid) => not @is_ttdash(uid) and uid of @lastActivity and elapsed(@lastActivity[uid]) > @get_config('capacity_min_idle')*MINUTE and not @uid_is_dj(uid) and not @is_mod(uid) and not @is_owner(uid) and uid isnt @userId and not @is_vip(uid))
         top_idlers = _.last(_.sortBy(idlers, (uid) => elapsed(@lastActivity[uid])), num_boot)
         
         if @get_config('fake_idle_boot')
@@ -1631,7 +1635,7 @@ class BusDriver
         if count == 0
           @bot.speak "#{issuer.name} is incapable of love"
         else
-          @bot.speak "You have given #{count} heart#{plural(count)}"
+          @bot.speak "#{issuer.name}, you have given #{count} heart#{plural(count)}"
       else if args is "top"
       else
         count = @actions["hearts"][issuer.userid]?.received ? 0
@@ -1657,6 +1661,6 @@ class BusDriver
         if count == 0
           @bot.speak "#{issuer.name}, you have no hug points and nobody loves you"
         else
-          @bot.speak "You have #{count} hug point#{plural(count)} :)"
+          @bot.speak "#{issuer.name}, you have #{count} hug point#{plural(count)} :)"
 
 exports.BusDriver = BusDriver
