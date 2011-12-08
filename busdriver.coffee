@@ -907,7 +907,7 @@ class BusDriver
     rl.on "line", (line) =>
       [cmd_txt, args] = command(line)
 
-      user = @roomUsers[@selfId]
+      user = @roomUsers[@userId]
       
       matcher = cmd_matches(cmd_txt)
       out = (txt) => util.puts txt
