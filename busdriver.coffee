@@ -172,10 +172,10 @@ class BusDriver
         
         if @get_config('fake_idle_boot')
           if top_idlers.length > 0
-            util.puts "idle booting: " + [@roomUsers[uid].name for uid in top_idlers].join(", ")
+            util.puts "Idle booting: " + [@roomUsers[uid].name for uid in top_idlers].join(", ")
         else
           for uid in top_idlers
-            bot.bootUser(uid, "Vote or chat to stay in the room!")
+            @bot.bootUser(uid, "Vote or chat to stay in the room!")
   
   ###
   Configuration
@@ -650,10 +650,8 @@ class BusDriver
         col.update criteria, modifications, {upsert: true}
 
       if @room_mode is NORMAL_MODE
-        util.puts "NORMAL MODE"
         # Only mod if there are some minimum amount of DJs
         if @limits_enabled and _.keys(@djSongCount).length >= @get_config('moderate_dj_min')
-          util.puts "LIMITS ENABLED, ENOUGH DJS"
           escorted = {}
           
           # Escort DJs that haven't gotten off!
