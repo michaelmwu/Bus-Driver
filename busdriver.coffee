@@ -162,7 +162,7 @@ class BusDriver
     
     setTimeout delay, 500
   
-  is_ttdash: (name) =>
+  is_ttdash: (uid) =>
     if @roomUsers[uid]?.name?
       @roomUsers[uid].name.indexOf("ttdashboard_") is 0
   
