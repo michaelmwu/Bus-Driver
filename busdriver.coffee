@@ -115,6 +115,13 @@ class BusDriver
     @update_user(user)
     @active[user.userid] = true
     @update_idle(user.userid)
+    
+    @db_col 'login', (col) =>
+      record =
+        'userInfo': user
+        'when': now()
+        'songs': @djSongCount[@currentDj.userid]
+      col.insert record
   
   get_by_name: (name) =>
     name = norm(name)
@@ -360,7 +367,8 @@ class BusDriver
     col.find {}, (err,cursor) =>
       cursor.each (err,doc) =>
         if doc isnt null
-          @djSongCount[doc.userInfo.userid] = doc.count
+          if doc.active
+            @djSongCount[doc.userInfo.userid] = doc.count
           
           if doc.camping?
             @campingDjs[doc.userInfo.userid] = doc.camping
@@ -493,6 +501,7 @@ class BusDriver
         init: @db_init_config
       'users':
         init: @db_init_users
+      'login': {}
     
     for name, props of @collections
       props.queue = []
@@ -1565,7 +1574,7 @@ class BusDriver
       count = @actions["hearts"][issuer.userid]?.given ? 0
       
       if count == 0
-        @bot.speak "You are incapable of love"
+        @bot.speak "#{issuer.name} is incapable of love"
       else
         @bot.speak "You have given #{count} heart#{plural(count)}"
     else if args is "top"
@@ -1573,24 +1582,24 @@ class BusDriver
       count = @actions["hearts"][issuer.userid]?.received ? 0
       
       if count == 0
-        @bot.speak "You are a heartless bastard"
+        @bot.speak "#{issuer.name} is a heartless bastard"
       else
-        @bot.speak "You have #{count} heart#{plural(count)}"
+        @bot.speak "#{issuer.name}, you have #{count} heart#{plural(count)}"
   
   cmd_hugs: (issuer, args) =>
     if args is "given"
       count = @actions["hugs"][issuer.userid]?.given ? 0
       
       if count == 0
-        @bot.speak "#{issuer.name} is afraid to hug"
+        @bot.speak "#{issuer.name} is afraid of human intimacy"
       else
-        @bot.speak "You've hugged #{count} time#{plural(count)}"
+        @bot.speak "#{issuer.name}, you've given #{count} hug#{plural(count)}"
     else if args is "top"
     else
       count = @actions["hugs"][issuer.userid]?.received ? 0
       
       if count == 0
-        @bot.speak "You have no hug points and nobody loves you"
+        @bot.speak "#{issuer.name}, you have no hug points and nobody loves you"
       else
         @bot.speak "You have #{count} hug point#{plural(count)} :)"
 
