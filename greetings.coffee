@@ -16,5 +16,6 @@ exports.greetings =
   "4df672394fe7d04a1901cbeb": (user) -> "#{user.name} is here and he brought Chipotle!"
   "4e827db5a3f7511650115ee1": "Konnichiwa, Stacy-san! :)"
   "4e19470fa3f75133a90951cc": (user) -> "And I said to #{user.name}: La gente esta muy loca! What the f*ck!?"
+  "4e14de52a3f75109d700e889": "Yo Signs, Umadbro?"
   "sex": "Who wants sex?"
   "vuther": "Hey, papa vuther is here on the PARTY BUS!"

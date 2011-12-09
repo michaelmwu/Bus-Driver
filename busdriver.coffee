@@ -64,8 +64,11 @@ class BusDriver
   norm = (text) =>
     text.trim().toLowerCase()
 
-  is_uid = (uid) =>
+  is_uid = (uid) ->
     uid and uid.length == 24
+  
+  to_uid = (uu) ->
+    uu.userid ? uu
 
   command = (line) =>
     cmd_pat = /^([^\s]+?)(\s+([^\s]+.*?))?\s*$/
@@ -82,11 +85,14 @@ class BusDriver
   ###
   State dependent utility functions
   ###
-  is_vip: (uid) =>
-    uid of @vips
+  is_special: (uu, allowed = true) =>
+    @is_vip(uu) or @is_mod(uu) or @is_owner(uu) or (allowed and @is_allowed(uu))
   
-  is_allowed: (uid) =>
-    uid of @allowed
+  is_vip: (uu) =>
+    to_uid(uu) of @vips
+  
+  is_allowed: (uu) =>
+    to_uid(uu) of @allowed
       
   update_name: (name, uid) =>
     @roomUsernames[norm(name)] = uid
@@ -94,7 +100,9 @@ class BusDriver
     if uid of @roomUsers
       @roomUsers[uid].name = name
   
-  update_idle: (uid) =>
+  update_idle: (uu) =>
+    uid = to_uid(uu)
+    
     @lastActivity[uid] = now()
     @active[uid] = true
     if uid of @warnedDjs
@@ -130,16 +138,18 @@ class BusDriver
     if uid of @djSongCount
       return uid
   
-  uid_is_dj: (uid) =>
-    uid of @djSongCount
+  is_dj: (uu) =>
+    to_uid(uu) of @djSongCount
       
-  is_mod: (uid) =>
-    uid of @mods
+  is_mod: (uu) =>
+    to_uid(uu) of @mods
   
-  is_owner: (uid) =>
-    _.include(@owners, uid)
+  is_owner: (uu) =>
+    _.include(@owners, to_uid(uu))
 
-  escort_warn: (uid) =>
+  escort_warn: (uu) =>
+    uid = to_uid(uu)
+    
     @bot.remDj(uid)
     
     if uid not of @escortWarnings or elapsed(@escortWarnings[uid].when) > @get_config('escort_interval') * SECOND
@@ -153,11 +163,15 @@ class BusDriver
       if @escortWarnings[uid].count > @get_config('escort_limit')
         @boot(uid, "Follow the rules! Wait for your turn on stage")
   
-  boot: (uid, reason) =>
+  boot: (uu, reason) =>
+    uid = to_uid(uu)
+    
     @bot.bootUser(uid, reason)
     delete @active[uid]
   
-  ensure_escort: (uid) =>
+  ensure_escort: (uu) =>
+    uid = to_uid(uu)
+    
     @escort_warn(uid)
     
     delay = =>
@@ -176,7 +190,7 @@ class BusDriver
       @roomInfo (data) =>
         num_boot = @userCount - @get_config('room_capacity')
 
-        idlers = _.filter(_.keys(@active), (uid) => not @is_ttdash(uid) and uid of @lastActivity and elapsed(@lastActivity[uid]) > @get_config('capacity_min_idle')*MINUTE and not @uid_is_dj(uid) and not @is_mod(uid) and not @is_owner(uid) and uid isnt @userId and not @is_vip(uid))
+        idlers = _.filter(_.keys(@active), (uid) => not @is_ttdash(uid) and uid of @lastActivity and elapsed(@lastActivity[uid]) > @get_config('capacity_min_idle')*MINUTE and not @is_dj(uid) and uid isnt @userId and not @is_special(uid))
         top_idlers = _.last(_.sortBy(idlers, (uid) => elapsed(@lastActivity[uid])), num_boot)
         
         if @get_config('fake_idle_boot')
@@ -391,10 +405,13 @@ class BusDriver
           @set_config(key, value, true)
   
   db_init_djs: (col) =>
-    col.find {}, (err,cursor) =>
+    criteria =
+      roomId: @roomId
+    
+    col.find criteria, (err,cursor) =>
       cursor.each (err,doc) =>
         if doc isnt null
-          if doc.active
+          if doc.onstage
             @djSongCount[doc.userInfo.userid] = doc.count
           
           if doc.camping?
@@ -605,6 +622,8 @@ class BusDriver
       room_capacity: {default: 199, format: "room_cap", unit: "user", name: "Number to limit capacity to"}
       capacity_min_idle: {default: 10, format: "+int", unit: "minute", name: "Minimum idle time to capacity boot"}
       chat_spam: {default: true, format: "onoff", name: "Turn on/off all chat spam commands"}
+      max_song_length: {default: 15, format: "+int", unit: "minute", name: "Maximum song length"}
+      song_length_escort: {default: true, format: "onoff", name: "Escort if song is too long"}
       
       
     @config_format =
@@ -642,8 +661,23 @@ class BusDriver
       
       @songName = data.room.metadata.current_song.metadata.song
       @currentDj = @roomUsers[data.room.metadata.current_dj]
+      
+      # Escort if song is too long
+      util.puts "checking length"
+      if not @is_special(@currentDj)
+        util.puts "not special"
+        
+        if @get_config('song_length_escort')
+          util.puts "escort enabled"
+          
+          util.puts data.room.metadata.current_song.metadata.length
+          util.puts @get_config('max_song_length') * 60
+          
+      if @get_config('song_length_escort') and data.room.metadata.current_song.metadata.length > @get_config('max_song_length') * 60 and not @is_special(@currentDj)
+        @ensure_escort(@currentDj)
+        @bot.speak "Sorry, my attention span for songs isn't greater than #{@get_config('max_song_length')} minutes"
 
-      if @uid_is_dj(@currentDj.userid)
+      if @is_dj(@currentDj.userid)
         @djSongCount[@currentDj.userid]++
       else
         @djSongCount[@currentDj.userid] = 1
@@ -695,11 +729,13 @@ class BusDriver
       @update_name(user.name, user.userid)
       uid = user.userid
       @update_idle(uid)
+      escorted = false
       
       if @boost
         if not (uid of @vips or uid of @allowed or @is_mod(uid) or @is_owner(uid)) and @selfModerator
           # Escort off stage
           @ensure_escort(uid)
+          escorted = true
           
           @bot.speak "Hey #{user.name}, back of the bus for you! We're letting a VIP up on stage right now!"
         else if (uid of @vips or uid of @allowed)
@@ -714,11 +750,13 @@ class BusDriver
               if @selfModerator
                 # Escort off stage
                 @ensure_escort(uid)
+                escorted = true
         else if @room_mode is VIP_MODE
           if not (uid of @vips or @is_mod(uid) or @is_owner(uid))
             if @selfModerator
               # Escort off stage
               @ensure_escort(uid)
+              escorted = true
             @bot.speak "#{user.name}, it's VIPs only on deck right now!"
     #    else if @room_mode is BATTLE_MODE
         
@@ -728,16 +766,18 @@ class BusDriver
       else
         @djSongCount[uid] = 0
       
-      @db_col 'djs', (col)=>
-        criteria =
-          'userInfo.userid': uid
-        modifications =
-          '$set':
-            'userInfo': user
-            'onstage': true
-            'left': now()
-            'count': @djSongCount[uid]
-        col.update criteria, modifications, {upsert: true}
+      if not escorted
+        @db_col 'djs', (col)=>
+          criteria =
+            'userInfo.userid': uid
+            'roomId': @roomId
+          modifications =
+            '$set':
+              'userInfo': user
+              'onstage': true
+              'left': now()
+              'count': @djSongCount[uid]
+          col.update criteria, modifications, {upsert: true}
 
     @bot.on "rem_dj", (data) =>
       user = data.user[0]
@@ -763,6 +803,12 @@ class BusDriver
       delete @djSongCount[uid]
       delete @campingDjs[uid]
       delete @warnedDjs[uid]
+    
+    @bot.on "booted_user", (data) =>
+      if data.success
+        util.puts "#{@roomUsers[data.userid].name} booted by #{@roomUsers[data.modid].name}"
+      else
+        util.puts "Failed boot: #{@roomUsers[data.userid].name} booted by #{@roomUsers[data.modid].name}"
     
     @bot.on "snagged", (data) =>
       @debug "Heart: #{@roomUsers[data.userid].name} to #{@currentDj.name}"
@@ -793,7 +839,7 @@ class BusDriver
             @bot.speak "#{@roomUsers[uid].name}, no falling asleep on deck!"
             @warnedDjs[uid] = true
           if idle > @get_config('dj_escort_time') * MINUTE
-            if uid isnt @currentDj?.userid and not @is_vip(uid) and not @is_mod(uid) and not @is_owner(uid)
+            if uid isnt @currentDj?.userid and not @is_special(uid, false)
               @ensure_escort(uid)
         else
           @lastActivity[uid] = now()
@@ -1492,7 +1538,7 @@ class BusDriver
   
   cmd_resetdj: (user, args) =>
     if djUser = @get_by_name(args)
-      if @uid_is_dj(djUser.userid)
+      if @is_dj(djUser.userid)
         @djSongCount[djUser.userid] = 0
       
       delete @campingDjs[djUser.userid]
@@ -1600,7 +1646,7 @@ class BusDriver
     @bot.speak "It's bumping in here! DJs wait #{@get_config('wait_songs')} songs"
   
   cmd_stagedive: (issuer) =>
-    if @uid_is_dj(issuer.userid)
+    if @is_dj(issuer.userid)
       @bot.remDj(issuer.userid)
       @bot.speak "#{issuer.name}, go crowd surfing!"
       
@@ -1613,7 +1659,7 @@ class BusDriver
     else
       @boost = on
       
-      @bot.speak "VIPs and allowed DJs, get up on deck!"
+      @bot.speak "Rocket boosting one VIP/allowed DJ!"
   
   cmd_set: (issuer, args, out) =>
     [key, value] = command(args)
