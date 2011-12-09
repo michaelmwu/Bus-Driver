@@ -96,6 +96,7 @@ class BusDriver
   
   update_idle: (uid) =>
     @lastActivity[uid] = now()
+    @active[uid] = true
     if uid of @warnedDjs
       delete @warnedDjs[uid]
   
@@ -150,7 +151,11 @@ class BusDriver
       @escortWarnings[uid].when = now()
       
       if @escortWarnings[uid].count > @get_config('escort_limit')
-        @bot.bootUser(uid, "Follow the rules! Wait for your turn on stage")
+        @boot(uid, "Follow the rules! Wait for your turn on stage")
+  
+  boot: (uid, reason) =>
+    @bot.bootUser(uid, reason)
+    delete @active[uid]
   
   ensure_escort: (uid) =>
     @escort_warn(uid)
@@ -179,7 +184,7 @@ class BusDriver
             util.puts "Idle booting: " + [@roomUsers[uid].name for uid in top_idlers].join(", ")
         else
           for uid in top_idlers
-            @bot.bootUser(uid, "Vote or chat to stay in the room!")
+            @boot(uid, "Vote or chat to stay in the room!")
   
   ###
   Configuration
@@ -834,7 +839,7 @@ class BusDriver
       
       if user.userid of @permabanned
         if @selfModerator
-          @bot.bootUser(user.userid, @permabanned[user.userid])
+          @boot(user.userid, @permabanned[user.userid])
           return
         else
           @bot.speak "I can't boot you, #{user.name}, but you've been banned for #{@permabanned[user.userid]}"
@@ -1136,7 +1141,7 @@ class BusDriver
           if uid is @userId
             @bot.speak "I'm not booting myself!"
           else
-            @bot.bootUser(uid, reason)
+            @boot(uid, reason)
         else
           @bot.speak "I couldn't find #{name} to boot!"
       else
@@ -1326,7 +1331,7 @@ class BusDriver
   cmd_ragequit: (issuer) =>
     if @get_config('chat_spam')
       @bot.speak "Lol umadbro?"
-    @bot.bootUser(issuer.userid, "gtfo")
+    @boot(issuer.userid, "gtfo")
   
   cmd_vuthers: =>
     if @get_config('chat_spam')
@@ -1524,7 +1529,7 @@ class BusDriver
           @bot.speak "I'm not booting myself!"
         else
           if @selfModerator
-            @bot.bootUser(uid, reason)
+            @boot(uid, reason)
             @bot.speak "Banning #{name}"
           else
             @bot.speak "I'm powerless to ban anyone, but #{name} is on the list!"
@@ -1551,7 +1556,7 @@ class BusDriver
         callback = =>
           for uid in data.room.metadata.djs
             @bot.remDj(uid)
-          @bot.bootUser(issuer.userid, "for pulling the fire alarm")
+          @boot(issuer.userid, "for pulling the fire alarm")
         
         it = (i) => @bot.speak(i)
         delay_countdown(callback, it, 2)
