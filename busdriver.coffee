@@ -172,14 +172,18 @@ class BusDriver
   ensure_escort: (uu) =>
     uid = to_uid(uu)
     
-    @escort_warn(uid)
-    
-    delay = =>
-      @roomInfo (data) =>
-        if uid in data.room.metadata.djs
-          @escort_warn(uid)
-    
-    setTimeout delay, 500
+    if @selfModerator
+      @escort_warn(uid)
+      util.puts "Escorting #{@roomUsers[uid].name}"
+      
+      delay = =>
+        @roomInfo (data) =>
+          if uid in data.room.metadata.djs
+            @escort_warn(uid)
+      
+      setTimeout delay, 500
+    else
+      util.puts "Attempting to escort #{@roomUsers[uid].name}, but not a moderator"
   
   is_ttdash: (uid) =>
     if @roomUsers[uid]?.name?
@@ -411,8 +415,9 @@ class BusDriver
     col.find criteria, (err,cursor) =>
       cursor.each (err,doc) =>
         if doc isnt null
-          if doc.onstage
-            @djSongCount[doc.userInfo.userid] = doc.count
+          if doc.onstage and is_number(doc.songs)
+            util.puts "Init: setting #{doc.userInfo.name} count to #{doc.songs}"
+            @djSongCount[doc.userInfo.userid] = doc.songs
           
           if doc.camping?
             @campingDjs[doc.userInfo.userid] = doc.camping
@@ -661,18 +666,7 @@ class BusDriver
       
       @songName = data.room.metadata.current_song.metadata.song
       @currentDj = @roomUsers[data.room.metadata.current_dj]
-      
-      # Escort if song is too long
-      util.puts "checking length"
-      if not @is_special(@currentDj)
-        util.puts "not special"
-        
-        if @get_config('song_length_escort')
-          util.puts "escort enabled"
-          
-          util.puts data.room.metadata.current_song.metadata.length
-          util.puts @get_config('max_song_length') * 60
-          
+                
       if @get_config('song_length_escort') and data.room.metadata.current_song.metadata.length > @get_config('max_song_length') * 60 and not @is_special(@currentDj)
         @ensure_escort(@currentDj)
         @bot.speak "Sorry, my attention span for songs isn't greater than #{@get_config('max_song_length')} minutes"
@@ -685,6 +679,7 @@ class BusDriver
       @db_col 'djs', (col) =>
         criteria =
           'userInfo.userid': @currentDj.userid
+          'roomId': @roomId
         modifications =
           '$set':
             'userInfo': @currentDj
@@ -768,6 +763,7 @@ class BusDriver
       
       if not escorted
         @db_col 'djs', (col)=>
+          util.puts "add: setting #{user.name} count to #{@djSongCount[uid]}"
           criteria =
             'userInfo.userid': uid
             'roomId': @roomId
@@ -784,8 +780,10 @@ class BusDriver
       uid = user.userid
       
       @db_col 'djs', (col)=>
+        util.puts "rem dj #{user.name}"
         criteria =
           'userInfo.userid': uid
+          'roomId': @roomId
         modifications =
           '$set':
             'userInfo': user
@@ -856,13 +854,47 @@ class BusDriver
           _.map(data.users, @register)
           
           # Initialize dj counts
-          for uid in data.room.metadata.djs
-            @djSongCount[uid] = 0
-          
           if @currentDj? and @currentDj.userid of @roomUsers
-            @djSongCount[@currentDj.userid] = 1
+            if not @is_dj(@currentDj) or @djSongCount[@currentDj.userid] is 0
+              util.puts "setting #{@currentDj.name} count to 1"
+              @djSongCount[@currentDj.userid] = 1
+            else
+              util.puts "skipping #{@currentDj.name}"
             
             @lastDj = @roomUsers[@currentDj.userid]
+          
+          for uid in data.room.metadata.djs
+            if not @is_dj(uid)
+              util.puts "setting #{@roomUsers[uid].name} count to 0"
+              @djSongCount[uid] = 0
+            else
+              util.puts "skipping #{@roomUsers[uid].name}"
+          
+          for uid in _.keys(@djSongCount)
+            if uid not in data.room.metadata.djs
+              util.puts "deleting #{@roomUsers[uid].name}"
+              delete @djSongCount[uid]
+              
+              @db_col 'djs', (col) =>
+                criteria =
+                  'userInfo.userid': uid
+                  'roomId': @roomId
+                modifications =
+                  '$set':
+                    'userInfo': @roomUsers[uid]
+                    'onstage': false
+                col.update criteria, modifications, {upsert: true}
+            else
+              @db_col 'djs', (col) =>
+                criteria =
+                  'userInfo.userid': uid
+                  'roomId': @roomId
+                modifications =
+                  '$set':
+                    'userInfo': @roomUsers[uid]
+                    'onstage': true
+                    'songs': @djSongCount[uid]
+                col.update criteria, modifications, {upsert: true}
           
           # Check if we are moderator
           @selfModerator = _.any(data.room.metadata.moderator_id, (id) => id is @userId)
@@ -1528,6 +1560,16 @@ class BusDriver
       if dj = @get_dj(name)
         @djSongCount[dj] = count
         
+        @db_col 'djs', (col) =>
+          criteria =
+            'userInfo.userid': dj
+            'roomId': @roomId
+          modifications =
+            '$set':
+              'userInfo': @roomUsers[dj]
+              'songs': count
+          col.update criteria, modifications, {upsert: true}
+        
         # Set camping if over
         if count >= @get_config('max_songs') and dj not of @campingDjs
           @campingDjs[dj] = 0
@@ -1540,6 +1582,16 @@ class BusDriver
     if djUser = @get_by_name(args)
       if @is_dj(djUser.userid)
         @djSongCount[djUser.userid] = 0
+        
+        @db_col 'djs', (col) =>
+          criteria =
+            'userInfo.userid': djUser.userid
+            'roomId': @roomId
+          modifications =
+            '$set':
+              'userInfo': djUser
+              'songs': 0
+          col.update criteria, modifications, {upsert: true}
       
       delete @campingDjs[djUser.userid]
       delete @djWaitCount[djUser.userid] 
