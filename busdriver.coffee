@@ -1842,7 +1842,7 @@ class BusDriver
     [key] = command(args)
     
     if key? and key of @config_props      
-      out "#{props.name}: #{@get_config(key, true)}"
+      out "#{@config_props[key].name}: #{@get_config(key, true)}"
   
   cmd_hearts: (issuer, args) =>
     if @get_config('chat_spam')
