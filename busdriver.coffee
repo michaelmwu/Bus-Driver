@@ -252,16 +252,13 @@ class BusDriver
     base = opts?.base ? 1
     
     time_pat = /^\s*(\d+|\d+\.\d*|\d*\.\d+)\s*([^\s]+)?\s*$/
-    util.puts "to time"
     
     if match = time_pat.exec(arg)
       number = parseFloat(match[1])
-      util.puts "matched: 1: #{match[1]} 2: #{match[2]}"
       
       if not isNaN(number) and number >= 0
         number = number / base
         
-        util.puts "have number #{number}"
         if match[2]? and match[2] isnt ""
           unit = match[2]
         
