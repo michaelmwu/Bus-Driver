@@ -301,9 +301,10 @@ class BusDriver
     if unit?
       first = Math.floor(time / time_units[unit].size)
       str = "#{first} #{time_units[unit].name}#{plural(first)}"
+      left = time % time_units[unit].size
       
       if unit < time_units.length - 1
-        second = Math.floor(time / time_units[unit + 1].size)
+        second = Math.floor(left / time_units[unit + 1].size)
         
         if second > 0
           str += " #{second} #{time_units[unit + 1].name}#{plural(second)}"
@@ -322,13 +323,18 @@ class BusDriver
     else
       "The ho-hum. FFA, #{@get_config('max_songs')} song limit, #{@get_config('wait_songs')} wait time between sets"
   
-  get_config: (key) =>
+  get_config: (key, pretty) =>
     if key of @config_props
       props = @config_props[key]
     
       result = if props.get? then props.get(key) else @config[key]
       
-      result ? props.default
+      result = result ? props.default
+      
+      if pretty and props.format? and (to_pretty = @config_format[props.format]?.pretty)?
+        to_pretty(result, props.opts)
+      else
+        result
   
   set_config: (key, value, raw = false) =>
     @debug "Setting config #{key}:#{value}"
@@ -785,10 +791,10 @@ class BusDriver
       
       @songName = data.room.metadata.current_song.metadata.song
       @currentDj = @users[data.room.metadata.current_dj]
-                
-      if @get_config('song_length_escort') and data.room.metadata.current_song.metadata.length > @get_config('max_song_length') * 60 and not @is_special(@currentDj)
+      
+      if @get_config('song_length_escort') and data.room.metadata.current_song.metadata.length > @get_config('max_song_length') and not @is_special(@currentDj)
         @ensure_escort(@currentDj)
-        @bot.speak "Sorry, my attention span for songs isn't greater than #{@get_config('max_song_length')} minutes"
+        @bot.speak "Sorry, my attention span for songs isn't greater than #{@get_config('max_song_length', true)}"
 
       if @is_dj(@currentDj.userid)
         @djSongCount[@currentDj.userid]++
@@ -1833,16 +1839,10 @@ class BusDriver
     @set_config(key, value)
   
   cmd_get: (issuer, args, out) =>
-    [x] = command(args)
+    [key] = command(args)
     
-    if x? and x of @config_props
-      props = @config_props[x]
-    
-      result = @config[x] ? props.default
-      
-      result = if props.format? and (pretty = @config_format[props.format]?.pretty)? then pretty(result, props.opts) else result
-      
-      out "#{props.name}: #{result}"
+    if key? and key of @config_props      
+      out "#{props.name}: #{@get_config(key, true)}"
   
   cmd_hearts: (issuer, args) =>
     if @get_config('chat_spam')
