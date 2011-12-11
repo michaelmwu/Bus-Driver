@@ -10,13 +10,20 @@ greet = require './greetings'
 ###
 Constants
 ###
-SECOND = 1000
-MINUTE = 60*SECOND
-HOUR = 60 * MINUTE
-DAY = 24 * HOUR
-WEEK = 7 * DAY
-MONTH = 30 * DAY
-YEAR = 365.25 * DAY
+SECOND_MS = 1000
+MINUTE_MS = 60*SECOND_MS
+HOUR_MS = 60 * MINUTE_MS
+DAY_MS = 24 * HOUR_MS
+WEEK_MS = 7 * DAY_MS
+MONTH_MS = 30 * DAY_MS
+YEAR_MS = 365.25 * DAY_MS
+
+SECOND_S = 1
+MINUTE_S = 60
+HOUR_S = 60 * MINUTE_S
+DAY_S = 24 * HOUR_S
+WEEK_S = 7 * DAY_S
+MONTH_S = 30 * DAY_S
 
 class BusDriver
   ###
@@ -95,10 +102,10 @@ class BusDriver
     to_uid(uu) of @allowed
       
   update_name: (name, uid) =>
-    @roomUsernames[norm(name)] = uid
+    @usernames[norm(name)] = uid
     
-    if uid of @roomUsers
-      @roomUsers[uid].name = name
+    if uid of @users
+      @users[uid].name = name
   
   update_idle: (uu) =>
     uid = to_uid(uu)
@@ -110,7 +117,7 @@ class BusDriver
   
   update_user: (user) =>
     @update_name(user.name, user.userid)
-    @roomUsers[user.userid] = user
+    @users[user.userid] = user
     
     @db_col 'users', (col) =>
       criteria =
@@ -127,11 +134,11 @@ class BusDriver
   
   get_by_name: (name) =>
     name = norm(name)
-    if name of @roomUsernames
-      @roomUsers[@roomUsernames[name]]
+    if name of @usernames
+      @users[@usernames[name]]
   
   get_uid: (name) =>
-    @roomUsernames[norm(name)]
+    @usernames[norm(name)]
 
   get_dj: (name) =>
     uid = @get_uid(name)
@@ -152,7 +159,7 @@ class BusDriver
     
     @bot.remDj(uid)
     
-    if uid not of @escortWarnings or elapsed(@escortWarnings[uid].when) > @get_config('escort_interval') * SECOND
+    if uid not of @escortWarnings or elapsed(@escortWarnings[uid].when) > @get_config('escort_interval') * SECOND_MS
       @escortWarnings[uid] =
         count: 1
         when: now()
@@ -174,7 +181,8 @@ class BusDriver
     
     if @selfModerator
       @escort_warn(uid)
-      util.puts "Escorting #{@roomUsers[uid].name}"
+      util.puts "Escorting #{@users[uid].name}"
+      delete @djSongCount[uid]
       
       delay = =>
         @roomInfo (data) =>
@@ -183,23 +191,23 @@ class BusDriver
       
       setTimeout delay, 500
     else
-      util.puts "Attempting to escort #{@roomUsers[uid].name}, but not a moderator"
+      util.puts "Attempting to escort #{@users[uid].name}, but not a moderator"
   
   is_ttdash: (uid) =>
-    if @roomUsers[uid]?.name?
-      @roomUsers[uid].name.indexOf("ttdashboard_") is 0
+    if @users[uid]?.name?
+      @users[uid].name.indexOf("ttdashboard_") is 0
   
   capacity_boot: =>
     if @userCount > @get_config('room_capacity')
       @roomInfo (data) =>
         num_boot = @userCount - @get_config('room_capacity')
 
-        idlers = _.filter(_.keys(@active), (uid) => not @is_ttdash(uid) and uid of @lastActivity and elapsed(@lastActivity[uid]) > @get_config('capacity_min_idle')*MINUTE and not @is_dj(uid) and uid isnt @userId and not @is_special(uid))
+        idlers = _.filter(_.keys(@active), (uid) => not @is_ttdash(uid) and uid of @lastActivity and elapsed(@lastActivity[uid]) > @get_config('capacity_min_idle')*MINUTE_MS and not @is_dj(uid) and uid isnt @userId and not @is_special(uid))
         top_idlers = _.last(_.sortBy(idlers, (uid) => elapsed(@lastActivity[uid])), num_boot)
         
         if @get_config('fake_idle_boot')
           if top_idlers.length > 0
-            util.puts "Idle booting: " + [@roomUsers[uid].name for uid in top_idlers].join(", ")
+            util.puts "Idle booting: " + [@users[uid].name for uid in top_idlers].join(", ")
         else
           for uid in top_idlers
             @boot(uid, "Vote or chat to stay in the room!")
@@ -207,71 +215,88 @@ class BusDriver
   ###
   Configuration
   ###
-  to_ranged_int = (options) =>
-    to_range = (arg) =>
-      result = parseInt(arg)
-      
-      if not isNaN(result) and (not options.min? or result >= options.min) and (not options.max? or result <= options.max)
-        return result
-    
-    to_range
+  check_range = (options) =>
+    (value) =>
+      if options.min? and value < options.min
+        options.min
+      else if options.max? and value > options.max
+        options.max
+      else
+        value
   
-  to_positive_int = (arg) =>
+  to_int = (arg) =>
+    result = parseInt(arg)
+    
+    if not isNaN(result)
+      result
+  
+  to_positive_int = (arg) ->
     result = parseInt(arg)
     
     if not isNaN(result) and result > 0
       result
 
-  pretty_int = (value, unit) =>
-    if unit?
-      "#{value} #{unit}#{plural(value)}"
+  pretty_int = (value, opts) ->
+    if opts?.unit?
+      "#{value} #{opts.unit}#{plural(value)}"
     else
       "#{value}"
 
-  to_bool = (arg) =>
+  to_bool = (arg) ->
     arg = norm(arg)
     
     arg = arg is "true" or arg is "on" or arg is "yes"
   
-  to_time = (arg, _unit = "s") =>
-    time_pat = /^\s*(\d+|\d+\.\d*|\d*\.\d+)\s*([^\s]+)?\s*$/
+  to_time = (arg, opts) =>
+    unit = opts?.unit ? "s"
+    base = opts?.base ? 1
     
-    if match = time_pat.exec(line)
+    time_pat = /^\s*(\d+|\d+\.\d*|\d*\.\d+)\s*([^\s]+)?\s*$/
+    util.puts "to time"
+    
+    if match = time_pat.exec(arg)
       number = parseFloat(match[1])
-      unit = match[2]
+      util.puts "matched: 1: #{match[1]} 2: #{match[2]}"
       
-      if not unit? or _unit is ""
-        unit = _unit
-      
-      if unit.indexOf("s") is 0
-        number * SECOND
-      else if unit.indexOf("ms") is 0 or unit.indexOf("mil") is 0
-        number
-      else if unit.indexOf("h") is 0
-        number * HOUR
-      else if unit.indexOf("d") is 0
-        number * DAY
-      else if unit.indexOf("w") is 0
-        number * WEEK
-      else if unit.indexOf("mo") is 0
-        number * MONTH
-      else if unit.indexOf("y") is 0
-        number * YEAR
-      else if unit.indexOf("m") is 0
-        number * MINUTE
-  
+      if not isNaN(number) and number >= 0
+        number = number / base
+        
+        util.puts "have number #{number}"
+        if match[2]? and match[2] isnt ""
+          unit = match[2]
+        
+        result = if unit.indexOf("s") is 0
+          number * SECOND_MS
+        else if unit.indexOf("ms") is 0 or unit.indexOf("mil") is 0
+          number
+        else if unit.indexOf("h") is 0
+          number * HOUR_MS
+        else if unit.indexOf("d") is 0
+          number * DAY_MS
+        else if unit.indexOf("w") is 0
+          number * WEEK_MS
+        else if unit.indexOf("mo") is 0
+          number * MONTH_MS
+        else if unit.indexOf("y") is 0
+          number * YEAR_MS
+        else if unit.indexOf("m") is 0
+          number * MINUTE_MS
+
   time_units = [
-    {name: "year", size: YEAR}
-    {name: "month", size: MONTH}
-    {name: "week", size: WEEK}
-    {name: "day", size: DAY}
-    {name: "hour", size: HOUR}
-    {name: "minute", size: MINUTE}
-    {name: "second", size: SECOND}
+    {name: "year", size: YEAR_MS}
+    {name: "month", size: MONTH_MS}
+    {name: "week", size: WEEK_MS}
+    {name: "day", size: DAY_MS}
+    {name: "hour", size: HOUR_MS}
+    {name: "minute", size: MINUTE_MS}
+    {name: "second", size: SECOND_MS}
   ]
   
-  to_pretty_time = (time) =>
-    unit = _.first(_.range(0, time_units.length), (i) -> arg > time_units[i].size)
+  pretty_time = (time, opts) =>
+    base = opts?.base ? 1
+    time *= base
+    
+    unit = _.find(_.range(0, time_units.length), (i) -> time > time_units[i].size)
     
     if unit?
       first = Math.floor(time / time_units[unit].size)
@@ -281,26 +306,13 @@ class BusDriver
         second = Math.floor(time / time_units[unit + 1].size)
         
         if second > 0
-          str += " "#{second} #{time_units[unit + 1].name}#{plural(second)}""
+          str += " #{second} #{time_units[unit + 1].name}#{plural(second)}"
       
       str
     else
       num = time / 1000
       
-      "{num} second#{plural(num)}"
-  
-  to_room_mode: (arg) =>
-    arg = norm(arg)
-    
-    if arg is "vips" or arg is "vip"
-      @bot.speak "It's a VIP party in here! VIPs (and mods) only on deck!"
-      VIP_MODE
-    else if arg is "battle"
-      @bot.speak "Ready to BATTLE?!!!"
-      BATTLE_MODE
-    else
-      @bot.speak "Back to the ho-hum. FFA, #{@get_config('max_songs')} song limit, #{@get_config('wait_songs')} wait time between sets"
-      NORMAL_MODE
+      "#{num} second#{plural(num)}"
   
   pretty_room_mode: (value) =>
     if value is VIP_MODE
@@ -326,7 +338,10 @@ class BusDriver
       
       if not raw and props.format?
         if to = @config_format[props.format]?.to
-          value = to(value)
+          value = to(value, props.opts)
+          
+          if props.valid?
+            value = props.valid(value)
       
       value = value ? props.default
       
@@ -358,7 +373,15 @@ class BusDriver
   roomInfo: (callback) =>
     @bot.roomInfo (data) =>
       @userCount = _.keys(data.users).length
-      @currentDj = if data.room.metadata.current_dj? then @roomUsers[data.room.metadata.current_dj]
+      @currentDj = if data.room.metadata.current_dj? then @users[data.room.metadata.current_dj]
+      
+      # Update DJs
+      newDjSongCount = {}
+        
+      for dj in data.room.metadata.djs
+        newDjSongCount[dj] = @djSongCount[dj] or 0
+      
+      @djSongCount = newDjSongCount
     
       # Initialize song
       if data.room.metadata.current_song
@@ -399,6 +422,8 @@ class BusDriver
               given: if is_number(doc.given) then doc.given else 0
               received: if is_number(doc.received) then doc.received else 0
   
+  db_init_bans: (col) =>
+  
   db_init_config: (col) =>
     criteria =
       "roomId": @roomId
@@ -432,7 +457,7 @@ class BusDriver
           if doc.allowed
             @allowed[doc.userInfo.userid] = doc.userInfo
           
-          if doc.userInfo.userid not of @roomUsers
+          if doc.userInfo.userid not of @users
             @update_user(doc.userInfo)
   
   ###
@@ -473,10 +498,10 @@ class BusDriver
     ###
     Room users
     ###
-    @roomUsers = {}
-    @roomUsernames = {}
+    @users = {}
+    @usernames = {}
     @active = {}
-    @roomUsersLeft = {}
+    @usersLeft = {}
     @userCount = 1
     
     @lastActivity = {}
@@ -543,18 +568,17 @@ class BusDriver
     @collections =
       actions:
         init: @db_init_actions
-      'chat':
-        foo: "hello"
-      'commands':
-        foo: "hello"
-      'djs':
+      bans:
+        init: @db_init_bans
+      chat: {}
+      commands: {}
+      djs:
         init: @db_init_djs
-      'rooms':
+      rooms:
         init: @db_init_config
-      'users':
+      users:
         init: @db_init_users
-      'login':
-        foo: "hello"
+      login: {}
     
     for name, props of @collections
       props.queue = []
@@ -601,41 +625,136 @@ class BusDriver
     @config = {}
 
     @config_props =    
-      max_songs: {default: 3, unit: "song", format: "+int", name: "Song limit"}
-      camp_songs: {default: 2, unit: "song", format: "+int", name: "DJ autoescort songs"} # How much tolerance we have before we just escort
-      wait_songs: {default: 3, unit: "song", format: "+int", name: "DJ naughty corner songs"}
-      wait_songs_day: {default: 3, unit: "song", format: "+int", name: "DJ naughty corner songs for day time"}
-      wait_songs_night: {default: 1, unit: "song", format: "+int", name: "DJ naughty corner songs for night time"}
-      wait_time: {default: 15, unit: "minute", format: "+int", name: "DJ naughty corner time"}
-      greeting_delay: {default: 15, unit: "second", format: "+int", name: "User greeting delay"}
-      special_greeting_delay: {default: 5, unit: "second", format: "+int", name: "Special greeting delay"}
-      rejoin_greeting_interval: {default: 10, unit: "second", format: "+int", name: "Rejoin no greeting interval"} # Time to wait before considering a rejoining user to have actually come back rather than disconnect
-      moderate_dj_min: {default: 3, unit: "dj", format: "+int", name: "Enforced rules DJ minimum"} # Minimum number of DJs to activate reup modding
-      dj_warn_time: {default: 11, unit: "minute", format: "+int", name: "AFK DJ warning time"}
-      dj_escort_time: {default: 15, unit: "minute", format: "+int", name: "AFK DJ escort time"}
-      escort_interval: {default: 20, unit: "second", format: "+int", name: "Window to boot if escorted too many times"}
-      escort_limit: {default: 3, unit: "time", format: "+int", name: "Too many escorts limit"}
-      cmd_djs_throttle_time: {default: 30, unit: "second", format: "+int", name: "/djs command throttle time"}
-      djs_resume_count_interval: {default: 20, unit: "minutes", format: "+int", name: "interval to resume song count"}
+      max_songs:
+        default: 3
+        opts:
+          unit: "song"
+        format: "+int"
+        name: "Song limit"
+      # How much tolerance we have before we just escort
+      camp_songs:
+        default: 2
+        opts:
+          unit: "song"
+        format: "+int"
+        name: "DJ autoescort songs"
+      wait_songs:
+        default: 3
+        opts:
+          unit: "song"
+          format: "+int"
+          name: "DJ naughty corner songs"
+      wait_songs_day:
+        default: 3
+        opts:
+          unit: "song"
+        format: "+int"
+        name: "DJ naughty corner songs for day time"
+      wait_songs_night:
+        default: 1
+        opts:
+          unit: "song"
+        format: "+int"
+        name: "DJ naughty corner songs for night time"
+      wait_time:
+        default: 15*MINUTE_MS
+        format: "time"
+        opts:
+          unit: "min"
+        name: "DJ naughty corner time"
+      greeting_delay:
+        default: 15*SECOND_MS
+        format: "time"
+        opts:
+          unit: "s"
+        name: "User greeting delay"
+      special_greeting_delay:
+        default: 5*SECOND_MS
+        format: "time"
+        opts:
+          unit: "s"
+        name: "Special greeting delay"
+      rejoin_greeting_interval:
+        default: 10*SECOND_MS
+        format: "time"
+        opts:
+          unit: "s"
+        name: "Rejoin no greeting interval"
+      # Minimum number of DJs to activate reup modding
+      moderate_dj_min:
+        default: 3
+        opts:
+          unit: "dj"
+        format: "+int"
+        valid: check_range({min: 0, max: 5})
+        name: "Enforced rules DJ minimum"
+      dj_warn_time:
+        default: 11*MINUTE_MS
+        format: "time"
+        opts:
+          unit: "min"
+        valid: check_range({min: 5*MINUTE_MS})
+        name: "AFK DJ warning time"
+      dj_escort_time:
+        default: 15*MINUTE_MS
+        format: "time"
+        opts:
+          unit: "min"
+        valid: check_range({min: 5*MINUTE_MS})
+        name: "AFK DJ escort time"
+      escort_interval:
+        default: 20*SECOND_MS
+        format: "time"
+        opts:
+          unit: "s"
+        name: "Window to boot if escorted too many times"
+      escort_limit:
+        default: 3
+        opts:
+          unit: "time"
+        format: "+int"
+        name: "Too many escorts limit"
+      cmd_djs_throttle_time:
+        default: 30*SECOND_MS
+        format: "time"
+        opts:
+          unit: "s"
+        name: "/djs command throttle time"
+      djs_resume_count_interval: {default: 20*MINUTE_MS, format: "time", opts: {unit: "min"}, name: "interval to resume song count"}
       mode: {default: NORMAL_MODE, format: "room_mode", name: "Room mode", set: ((value) => @room_mode = value), get: => @room_mode}
       debug: {default: off, format: "onoff", name: "Command line debug", set: ((value) => debug_on = value), get: => debug_on}
       rules_link: {default: "http://bit.ly/thepartybus", name: "Rules link"}
       greetings: {default: true, format: "onoff", name: "Greetings"}
-      greetings_max_capacity: {default: 100, unit: "user", format: "+int", name: "Number of users to disable greetings at"}
+      greetings_max_capacity: {default: 100, opts: {unit: "user"}, format: "+int", valid: check_range({max: 200}), name: "Number of users to disable greetings at"}
       capacity_boot: {default: true, format: "onoff", name: "Boot at capacity"}
       fake_idle_boot: {default: false, format: "onoff", name: "Fake boot at capacity"}
-      room_capacity: {default: 199, format: "room_cap", unit: "user", name: "Number to limit capacity to"}
-      capacity_min_idle: {default: 10, format: "+int", unit: "minute", name: "Minimum idle time to capacity boot"}
+      room_capacity: {default: 199, format: "+int", valid: check_range({min: 195, max: 200}), opts: {unit: "user"}, name: "Number to limit capacity to"}
+      capacity_min_idle: {default: 10*MINUTE_MS, format: "time", opts: {unit: "min"}, valid: check_range({min: 5*MINUTE_MS}), name: "Minimum idle time to capacity boot"}
       chat_spam: {default: true, format: "onoff", name: "Turn on/off all chat spam commands"}
-      max_song_length: {default: 15, format: "+int", unit: "minute", name: "Maximum song length"}
+      max_song_length: {default: 15*MINUTE_S, format: "time", opts: {unit: "min", base: SECOND_MS}, valid: check_range({min: 3*MINUTE_S}), name: "Maximum song length"}
       song_length_escort: {default: true, format: "onoff", name: "Escort if song is too long"}
       
-      
     @config_format =
-      "+int": {to: to_positive_int, pretty: pretty_int}
-      "room_cap": {to: to_ranged_int({min: 195, max: 200}), pretty: pretty_int}
-      "onoff": {to: to_bool, pretty: (value) => if value then "on" else "off"}
-      "room_mode": {to: @to_room_mode, pretty: @pretty_room_mode}
+      "int":
+        to: to_int
+        pretty: pretty_int
+      "+int":
+        to: to_positive_int
+        pretty: pretty_int
+      "time":
+        to: to_time
+        pretty: pretty_time
+      "onoff":
+        to: to_bool
+        pretty: (value) => if value then "on" else "off"
+      "room_mode":
+        to: @to_room_mode
+        pretty: @pretty_room_mode
+    
+    # Load config from controller
+    if options.config?
+      for key, value in options.config
+        @set_config(key, value)
             
     #ircClient = new irc.Client options.ircServer, options.ircHandle, 
     #  channels: [options.ircChan]
@@ -665,7 +784,7 @@ class BusDriver
       @downVotes = data.room.metadata.downvotes
       
       @songName = data.room.metadata.current_song.metadata.song
-      @currentDj = @roomUsers[data.room.metadata.current_dj]
+      @currentDj = @users[data.room.metadata.current_dj]
                 
       if @get_config('song_length_escort') and data.room.metadata.current_song.metadata.length > @get_config('max_song_length') * 60 and not @is_special(@currentDj)
         @ensure_escort(@currentDj)
@@ -756,14 +875,14 @@ class BusDriver
     #    else if @room_mode is BATTLE_MODE
         
       # Resume song count if DJ rejoined too quickly
-      if uid of @pastDjSongCount and elapsed(@pastDjSongCount[uid].when) < @get_config('djs_resume_count_interval') * MINUTE
+      if uid of @pastDjSongCount and elapsed(@pastDjSongCount[uid].when) < @get_config('djs_resume_count_interval') * MINUTE_MS
         @djSongCount[uid] = @pastDjSongCount[uid].count
       else
         @djSongCount[uid] = 0
       
       if not escorted
         @db_col 'djs', (col)=>
-          util.puts "add: setting #{user.name} count to #{@djSongCount[uid]}"
+          @debug "Add DJ: Setting #{user.name} count to #{@djSongCount[uid]}"
           criteria =
             'userInfo.userid': uid
             'roomId': @roomId
@@ -780,7 +899,7 @@ class BusDriver
       uid = user.userid
       
       @db_col 'djs', (col)=>
-        util.puts "rem dj #{user.name}"
+        @debug "Rem DJ: #{user.name}"
         criteria =
           'userInfo.userid': uid
           'roomId': @roomId
@@ -804,13 +923,14 @@ class BusDriver
     
     @bot.on "booted_user", (data) =>
       if data.success
-        util.puts "#{@roomUsers[data.userid].name} booted by #{@roomUsers[data.modid].name}"
+        util.puts "#{@users[data.userid].name} booted by #{@users[data.modid].name}"
+        delete @active[data.userid]
       else
-        util.puts "Failed boot: #{@roomUsers[data.userid].name} booted by #{@roomUsers[data.modid].name}"
+        util.puts "Failed boot: #{@users[data.userid].name} booted by #{@users[data.modid].name}"
     
     @bot.on "snagged", (data) =>
-      @debug "Heart: #{@roomUsers[data.userid].name} to #{@currentDj.name}"
-      @track_action("hearts", @roomUsers[data.userid], @currentDj)
+      @debug "Heart: #{@users[data.userid].name} to #{@currentDj.name}"
+      @track_action("hearts", @users[data.userid], @currentDj)
     
     greetings = greet.greetings  
     
@@ -833,10 +953,10 @@ class BusDriver
         if uid of @lastActivity
           idle = elapsed(@lastActivity[uid])
           
-          if idle > @get_config('dj_warn_time') * MINUTE and uid not of @warnedDjs
-            @bot.speak "#{@roomUsers[uid].name}, no falling asleep on deck!"
+          if idle > @get_config('dj_warn_time') * MINUTE_MS and uid not of @warnedDjs
+            @bot.speak "#{@users[uid].name}, no falling asleep on deck!"
             @warnedDjs[uid] = true
-          if idle > @get_config('dj_escort_time') * MINUTE
+          if idle > @get_config('dj_escort_time') * MINUTE_MS
             if uid isnt @currentDj?.userid and not @is_special(uid, false)
               @ensure_escort(uid)
         else
@@ -854,25 +974,25 @@ class BusDriver
           _.map(data.users, @register)
           
           # Initialize dj counts
-          if @currentDj? and @currentDj.userid of @roomUsers
+          if @currentDj? and @currentDj.userid of @users
             if not @is_dj(@currentDj) or @djSongCount[@currentDj.userid] is 0
               util.puts "setting #{@currentDj.name} count to 1"
               @djSongCount[@currentDj.userid] = 1
             else
               util.puts "skipping #{@currentDj.name}"
             
-            @lastDj = @roomUsers[@currentDj.userid]
+            @lastDj = @users[@currentDj.userid]
           
           for uid in data.room.metadata.djs
             if not @is_dj(uid)
-              util.puts "setting #{@roomUsers[uid].name} count to 0"
+              util.puts "setting #{@users[uid].name} count to 0"
               @djSongCount[uid] = 0
             else
-              util.puts "skipping #{@roomUsers[uid].name}"
+              util.puts "skipping #{@users[uid].name}"
           
           for uid in _.keys(@djSongCount)
             if uid not in data.room.metadata.djs
-              util.puts "deleting #{@roomUsers[uid].name}"
+              util.puts "deleting #{@users[uid].name}"
               delete @djSongCount[uid]
               
               @db_col 'djs', (col) =>
@@ -881,7 +1001,7 @@ class BusDriver
                   'roomId': @roomId
                 modifications =
                   '$set':
-                    'userInfo': @roomUsers[uid]
+                    'userInfo': @users[uid]
                     'onstage': false
                 col.update criteria, modifications, {upsert: true}
             else
@@ -891,7 +1011,7 @@ class BusDriver
                   'roomId': @roomId
                 modifications =
                   '$set':
-                    'userInfo': @roomUsers[uid]
+                    'userInfo': @users[uid]
                     'onstage': true
                     'songs': @djSongCount[uid]
                 col.update criteria, modifications, {upsert: true}
@@ -923,25 +1043,25 @@ class BusDriver
           @bot.speak "I can't boot you, #{user.name}, but you've been banned for #{@permabanned[user.userid]}"
       
       # Only say hello to people that have left more than REJOIN_MESSAGE_WAIT_TIME ago
-      if _.keys(@active).length <= @get_config('greetings_max_capacity') and @get_config('greetings') and user.userid isnt @userId and (not @roomUsersLeft[user.userid] or elapsed(@roomUsersLeft[user.userid]) > @get_config('rejoin_greeting_interval') * SECOND)
+      if _.keys(@active).length <= @get_config('greetings_max_capacity') and @get_config('greetings') and user.userid isnt @userId and (not @usersLeft[user.userid] or elapsed(@usersLeft[user.userid]) > @get_config('rejoin_greeting_interval') * SECOND_MS)
         if greeting = get_greeting(user)
           delay = =>
             if user.userid of @active
               @bot.speak greeting
           
-          setTimeout delay, @get_config('special_greeting_delay') * SECOND
+          setTimeout delay, @get_config('special_greeting_delay') * SECOND_MS
         else if user.userid of @vips
           delay = =>
             if user.userid of @active
               @bot.speak "Welcome #{user.name}, we have a VIP aboard the PARTY BUS!"
 
-          setTimeout delay, @get_config('special_greeting_delay') * SECOND
+          setTimeout delay, @get_config('special_greeting_delay') * SECOND_MS
         else if user.acl > 0
           delay = =>
             if user.userid of @active
               @bot.speak "We have a superuser in the HOUSE! #{user.name}, welcome aboard the PARTY BUS!"
 
-          setTimeout delay, @get_config('special_greeting_delay') * SECOND
+          setTimeout delay, @get_config('special_greeting_delay') * SECOND_MS
         else
           @joinedUsers[user.userid] = user
           
@@ -957,11 +1077,11 @@ class BusDriver
             @greetingTimeout = null
 
           if not @greetingTimeout
-            @greetingTimeout = setTimeout delay, @get_config('greeting_delay') * SECOND
+            @greetingTimeout = setTimeout delay, @get_config('greeting_delay') * SECOND_MS
       
       for user in data.user
         # Double join won't spam
-        @roomUsersLeft[user.userid] = new Date()
+        @usersLeft[user.userid] = new Date()
     
     @bot.on "update_user", (data) =>
       # Track name changes
@@ -972,7 +1092,7 @@ class BusDriver
       user = data.user[0]
       @userCount -= 1
       delete @active[user.userid]
-      @roomUsersLeft[user.userid] = new Date()
+      @usersLeft[user.userid] = new Date()
     
     # Add and remove moderator
     @bot.on "new_moderator", (data) =>
@@ -994,7 +1114,7 @@ class BusDriver
     rl.on "line", (line) =>
       [cmd_txt, args] = command(line)
 
-      user = @roomUsers[@userId]
+      user = @users[@userId]
       
       matcher = cmd_matches(cmd_txt)
       out = (txt) => util.puts txt
@@ -1012,7 +1132,7 @@ class BusDriver
       @update_name(data.name, data.userid)
       @update_idle(data.userid)
       [cmd_txt, args] = command(data.text)
-      user = @roomUsers[data.userid]
+      user = @users[data.userid]
       
       resolved_cmd = _.find(@commands, cmd_matches(cmd_txt))
       
@@ -1185,8 +1305,8 @@ class BusDriver
     @bot.speak args.trim()
   
   cmd_whoami: (user, args, out) =>
-    if options.userId of @roomUsers
-      out "Logged in as #{@roomUsers[options.userId].name}"
+    if options.userId of @users
+      out "Logged in as #{@users[options.userId].name}"
     else
       out "Couldn't find myself"
   
@@ -1482,6 +1602,7 @@ class BusDriver
   cmd_throttled_djs: (user, args, out) =>
     if not @djs_last? or now().getTime() - @djs_last.getTime() > @get_config('cmd_djs_throttle_time')
       @cmd_djs(user, args, out)
+      @djs_last = now()
   
   cmd_djs: (user, args, out) =>
     if _.keys(@djSongCount).length == 0
@@ -1489,20 +1610,13 @@ class BusDriver
     else
       txt = "Song Totals: "
       @roomInfo (data) =>
-        newDjSongCount = {}
-        
-        for dj in data.room.metadata.djs
-          newDjSongCount[dj] = @djSongCount[dj] or 0
-        
-        @djSongCount = newDjSongCount
-        
-        out (txt + ("#{@roomUsers[dj].name}: #{count}" for dj, count of @djSongCount).join(", "))
+        out (txt + ("#{@users[dj].name}: #{count}" for dj, count of @djSongCount).join(", "))
 
   cmd_waiting: =>
     if _.keys(@djWaitCount).length == 0
       @bot.speak "No DJs are in the naughty corner!"
     else
-      waiting_list = ("#{@roomUsers[dj].name}: #{@get_config('wait_songs') - count}" for dj, count of @djWaitCount).join(", ") + " songs"
+      waiting_list = ("#{@users[dj].name}: #{@get_config('wait_songs') - count}" for dj, count of @djWaitCount).join(", ") + " songs"
       @bot.speak "DJ naughty corner: #{waiting_list}"
   
   cmd_queue: (issuer, args) =>
@@ -1525,7 +1639,7 @@ class BusDriver
   cmd_mods: =>
     @roomInfo (data) =>
       # Collect mods
-      mod_list = (@roomUsers[uid].name for uid in data.room.metadata.moderator_id when @active[uid] and uid isnt @userId and uid not in @excluded_mods).join(", ")
+      mod_list = (@users[uid].name for uid in data.room.metadata.moderator_id when @active[uid] and uid isnt @userId and uid not in @excluded_mods).join(", ")
       @bot.speak "Current mods in the Party Bus are #{mod_list}"
   
   cmd_users: =>
@@ -1566,7 +1680,7 @@ class BusDriver
             'roomId': @roomId
           modifications =
             '$set':
-              'userInfo': @roomUsers[dj]
+              'userInfo': @users[dj]
               'songs': count
           col.update criteria, modifications, {upsert: true}
         
@@ -1641,10 +1755,10 @@ class BusDriver
     
     if is_uid(query) and query of @permabanned
       delete @permabanned[query]
-      @bot.speak "Unbanning #{@roomUsers[query].name}"
+      @bot.speak "Unbanning #{@users[query].name}"
     else if user = @get_by_name(query)
       delete @permabanned[user.userid]
-      @bot.speak "Unbanning #{@roomUsers[user.userid].name}"
+      @bot.speak "Unbanning #{@users[user.userid].name}"
   
   cmd_chinesefiredrill: (issuer, args) =>
     @roomInfo (data) =>
@@ -1661,7 +1775,7 @@ class BusDriver
       else
         @bot.speak "CHINESE FIRE DRILL DRILL! In 3"
         
-        msg = => @bot.speak "Escorting " + (@roomUsers[dj].name for dj in data.room.metadata.djs).join(", ") + " and booting #{issuer.name} for pulling the fire alarm."
+        msg = => @bot.speak "Escorting " + (@users[dj].name for dj in data.room.metadata.djs).join(", ") + " and booting #{issuer.name} for pulling the fire alarm."
         it = (i) => @bot.speak(i)
         delay_countdown(msg, it, 2)
   
@@ -1726,7 +1840,7 @@ class BusDriver
     
       result = @config[x] ? props.default
       
-      result = if props.format? and (pretty = @config_format[props.format]?.pretty)? then pretty(result, props.unit) else result
+      result = if props.format? and (pretty = @config_format[props.format]?.pretty)? then pretty(result, props.opts) else result
       
       out "#{props.name}: #{result}"
   
