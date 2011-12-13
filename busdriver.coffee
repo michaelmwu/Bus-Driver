@@ -159,7 +159,7 @@ class BusDriver
     
     @bot.remDj(uid)
     
-    if uid not of @escortWarnings or elapsed(@escortWarnings[uid].when) > @get_config('escort_interval') * SECOND_MS
+    if uid not of @escortWarnings or elapsed(@escortWarnings[uid].when) > @get_config('escort_interval')
       @escortWarnings[uid] =
         count: 1
         when: now()
@@ -878,7 +878,7 @@ class BusDriver
     #    else if @room_mode is BATTLE_MODE
         
       # Resume song count if DJ rejoined too quickly
-      if uid of @pastDjSongCount and elapsed(@pastDjSongCount[uid].when) < @get_config('djs_resume_count_interval') * MINUTE_MS
+      if uid of @pastDjSongCount and elapsed(@pastDjSongCount[uid].when) < @get_config('djs_resume_count_interval')
         @djSongCount[uid] = @pastDjSongCount[uid].count
       else
         @djSongCount[uid] = 0
@@ -956,10 +956,10 @@ class BusDriver
         if uid of @lastActivity
           idle = elapsed(@lastActivity[uid])
           
-          if idle > @get_config('dj_warn_time') * MINUTE_MS and uid not of @warnedDjs
+          if idle > @get_config('dj_warn_time') and uid not of @warnedDjs
             @bot.speak "#{@users[uid].name}, no falling asleep on deck!"
             @warnedDjs[uid] = true
-          if idle > @get_config('dj_escort_time') * MINUTE_MS
+          if idle > @get_config('dj_escort_time')
             if uid isnt @currentDj?.userid and not @is_special(uid, false)
               @ensure_escort(uid)
         else
@@ -1046,25 +1046,25 @@ class BusDriver
           @bot.speak "I can't boot you, #{user.name}, but you've been banned for #{@permabanned[user.userid]}"
       
       # Only say hello to people that have left more than REJOIN_MESSAGE_WAIT_TIME ago
-      if _.keys(@active).length <= @get_config('greetings_max_capacity') and @get_config('greetings') and user.userid isnt @userId and (not @usersLeft[user.userid] or elapsed(@usersLeft[user.userid]) > @get_config('rejoin_greeting_interval') * SECOND_MS)
+      if _.keys(@active).length <= @get_config('greetings_max_capacity') and @get_config('greetings') and user.userid isnt @userId and (not @usersLeft[user.userid] or elapsed(@usersLeft[user.userid]) > @get_config('rejoin_greeting_interval'))
         if greeting = get_greeting(user)
           delay = =>
             if user.userid of @active
               @bot.speak greeting
           
-          setTimeout delay, @get_config('special_greeting_delay') * SECOND_MS
+          setTimeout delay, @get_config('special_greeting_delay')
         else if user.userid of @vips
           delay = =>
             if user.userid of @active
               @bot.speak "Welcome #{user.name}, we have a VIP aboard the PARTY BUS!"
 
-          setTimeout delay, @get_config('special_greeting_delay') * SECOND_MS
+          setTimeout delay, @get_config('special_greeting_delay')
         else if user.acl > 0
           delay = =>
             if user.userid of @active
               @bot.speak "We have a superuser in the HOUSE! #{user.name}, welcome aboard the PARTY BUS!"
 
-          setTimeout delay, @get_config('special_greeting_delay') * SECOND_MS
+          setTimeout delay, @get_config('special_greeting_delay')
         else
           @joinedUsers[user.userid] = user
           
@@ -1080,7 +1080,7 @@ class BusDriver
             @greetingTimeout = null
 
           if not @greetingTimeout
-            @greetingTimeout = setTimeout delay, @get_config('greeting_delay') * SECOND_MS
+            @greetingTimeout = setTimeout delay, @get_config('greeting_delay')
       
       for user in data.user
         # Double join won't spam
